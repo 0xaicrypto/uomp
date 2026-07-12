@@ -66,22 +66,21 @@ UOMP 的设计目标是：
 
 ### 5.1 Architecture
 
-```
-┌─────────────┐      create/grant/revoke      ┌──────────────┐
-│   用户 UI    │  ◄────────────────────────►  │ Auth Service │
-└─────────────┘                               └──────┬───────┘
-                                                     │
-                              Capability Token       │
-                                                     ▼
-┌─────────────┐      HTTP + Authorization         ┌──────────────┐
-│    Agent    │  ─────────────────────────────►   │ Memory Guard │
-└─────────────┘                                   └──────┬───────┘
-                                                         │
-                                                         ▼
-                                                  ┌──────────────┐
-                                                  │ Memory Store │
-                                                  └──────────────┘
-```
+<div class="mermaid">
+flowchart LR
+    subgraph UserHost["用户本机 / User Host"]
+        UI["用户 UI / CLI"]
+        Auth["Auth Service"]
+        Guard["Memory Guard"]
+        Store[("Memory Store")]
+    end
+    Agent["Agent\n(独立进程)"]
+
+    UI <-->|"create / grant / revoke"| Auth
+    Auth -->|"Capability Token"| Agent
+    Agent -->|"HTTP + Authorization"| Guard
+    Guard -->|"read / write (filtered)"| Store
+</div>
 
 ### 5.2 Flow
 

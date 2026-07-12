@@ -21,7 +21,7 @@ This document explains how the UOMP **reference implementation** [`uomp-mvp`](ht
 | `packages/auth` | Auth Service | Session create/grant/close/revoke |
 | `packages/guard` | Memory Guard | Token validation, scope filtering, audit logging |
 | `packages/identity` | Identity Verification | DID / GPG verification entry point |
-| `packages/sdk` | Agent SDK | TypeScript SDK for Agents |
+| `packages/sdk` | Agent SDK (example-level) | A simple HTTP client wrapper for example Agents; full TypeScript SDK for GUI app integration is planned in [Roadmap](/en/roadmap/) Milestone 2 |
 | `packages/cli` | User UI | Interactive authorization, Agent launcher |
 | `apps/server` | — | Combined Auth + Guard HTTP service |
 
@@ -31,17 +31,27 @@ This document explains how the UOMP **reference implementation** [`uomp-mvp`](ht
 
 In UOMP's standard model, the **Agent is an independent process**, and the uomp CLI is the **user-side authorization proxy** running on the machine where the Memory Store / Guard lives:
 
-```
-1. Agent runs independently and exposes or publishes its uom.json
-2. uomp CLI (user side) discovers the Agent and reads uom.json
-3. CLI calls IdentityVerifier to verify Agent identity (optional), showing a warning to the user
-4. CLI prompts the user to select allowed tags
-5. CLI calls AuthService.createSession() (status=created)
-6. CLI calls AuthService.grantSession(sessionId, grantedScopes) to issue JWT
-7. CLI delivers the UOM_TOKEN to the Agent (via callback, HTTP, or local environment variable)
-8. Agent uses the Token to access Memory Guard; Guard validates the Token and returns scoped data
-9. When the Agent task completes, times out, or the user revokes access, the Session closes (status=closed/revoked)
-```
+<div class="mermaid">
+sequenceDiagram
+    participant Agent as Agent (independent process)
+    participant CLI as uomp CLI (user side)
+    participant Auth as Auth Service
+    participant Guard as Memory Guard
+    participant Store as Memory Store
+
+    Agent->>CLI: 1. Provide uom.json
+    CLI->>CLI: 2. Identity verification (optional)
+    CLI->>CLI: 3. User authorization panel
+    CLI->>Auth: 4. createSession(status=created)
+    CLI->>Auth: 5. grantSession(grantedScopes)
+    Auth-->>CLI: UOM_TOKEN
+    CLI-->>Agent: 6. Deliver UOM_TOKEN
+    Agent->>Guard: 7. HTTP + Authorization
+    Guard->>Guard: Validate Token & Scope
+    Guard->>Store: Read by scope
+    Store-->>Guard: Memory Items
+    Guard-->>Agent: Return filtered data
+</div>
 
 Key points:
 
@@ -53,13 +63,22 @@ Key points:
 
 The MVP's `pnpm cli run ./examples/calendar-agent` is a shortcut to lower the barrier to entry:
 
-```
-1. CLI reads ./examples/calendar-agent/uom.json
-2. CLI performs identity verification, user authorization, and Token issuance
-3. CLI starts local MemoryGuard
-4. CLI spawns the Agent as a child process, injecting UOM_TOKEN and UOMP_BASE_URL
-5. After the Agent finishes, CLI closes the Session
-```
+<div class="mermaid">
+sequenceDiagram
+    participant CLI as uomp CLI
+    participant Auth as Auth Service
+    participant Guard as Memory Guard
+    participant Agent as Agent (child process)
+
+    CLI->>CLI: Read uom.json
+    CLI->>Auth: createSession & grantSession
+    Auth-->>CLI: UOM_TOKEN
+    CLI->>Guard: Start local Guard
+    CLI->>Agent: Spawn child process with UOM_TOKEN
+    Agent->>Guard: Access data using Token
+    Agent-->>CLI: Process exits
+    CLI->>Auth: closeSession
+</div>
 
 This mode merges the "authorization proxy" and "Agent launcher" roles and is only suitable for local development and testing, not production architecture.
 

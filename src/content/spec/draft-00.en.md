@@ -66,22 +66,21 @@ UOMP's design goals are:
 
 ### 5.1 Architecture
 
-```
-┌─────────────┐      create/grant/revoke      ┌──────────────┐
-│   User UI    │  ◄────────────────────────►  │ Auth Service │
-└─────────────┘                               └──────┬───────┘
-                                                     │
-                              Capability Token       │
-                                                     ▼
-┌─────────────┐      HTTP + Authorization         ┌──────────────┐
-│    Agent    │  ─────────────────────────────►   │ Memory Guard │
-└─────────────┘                                   └──────┬───────┘
-                                                         │
-                                                         ▼
-                                                  ┌──────────────┐
-                                                  │ Memory Store │
-                                                  └──────────────┘
-```
+<div class="mermaid">
+flowchart LR
+    subgraph UserHost["User Host"]
+        UI["User UI / CLI"]
+        Auth["Auth Service"]
+        Guard["Memory Guard"]
+        Store[("Memory Store")]
+    end
+    Agent["Agent\n(independent process)"]
+
+    UI <-->|"create / grant / revoke"| Auth
+    Auth -->|"Capability Token"| Agent
+    Agent -->|"HTTP + Authorization"| Guard
+    Guard -->|"read / write (filtered)"| Store
+</div>
 
 ### 5.2 Flow
 

@@ -70,5 +70,12 @@ const resolvedSwitchHref = switchHref ?? (lang === 'zh' ? `${baseUrl}en/` : base
     <footer>
       <div class="container" set:html={t.footer} />
     </footer>
+    <script>
+      import mermaid from 'mermaid';
+      mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+      document.addEventListener('DOMContentLoaded', () => {
+        mermaid.run({ querySelector: '.mermaid' });
+      });
+    </script>
   </body>
 </html>

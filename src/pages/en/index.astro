@@ -68,6 +68,22 @@ import { baseUrl } from '../../utils/base.ts';
   <section class="alt">
     <div class="container">
       <h2>How It Works</h2>
+      <div class="mermaid">
+flowchart LR
+    subgraph UserSide["User Device"]
+        UI["uomp CLI / GUI"]
+        Auth["Auth Service"]
+        Guard["Memory Guard"]
+        Store[("Memory Store")]
+    end
+    Agent["Agent\n(independent process)"]
+
+    Agent -->|"1. provides uom.json"| UI
+    UI -->|"2. confirm scope"| Auth
+    Auth -->|"3. issue Capability Token"| Agent
+    Agent -->|"4. HTTP + Token"| Guard
+    Guard -->|"5. filter by scope"| Store
+      </div>
       <ol>
         <li><strong>Discover an Agent</strong>: Browse an Agent marketplace (e.g., an ERC8004-based registry).</li>
         <li><strong>Review the Manifest</strong>: The Agent declares its identity and requested memory scope in <code>uom.json</code>.</li>

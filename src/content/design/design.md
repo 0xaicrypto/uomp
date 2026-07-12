@@ -21,7 +21,7 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 | `packages/auth` | Auth Service | Session 创建/授权/关闭/撤销 |
 | `packages/guard` | Memory Guard | Token 校验、Scope 过滤、审计日志 |
 | `packages/identity` | Identity Verification | DID / GPG 验证入口 |
-| `packages/sdk` | Agent SDK | 供 Agent 调用的 TypeScript SDK |
+| `packages/sdk` | Agent SDK（示例级） | 当前为示例 Agent 提供的简单 HTTP 调用封装；面向 GUI 应用集成的完整 TypeScript SDK 见 [路线图](/roadmap/) Milestone 2 |
 | `packages/cli` | User UI | 交互式授权、启动 Agent |
 | `apps/server` | — | Auth + Guard 组合 HTTP 服务 |
 
@@ -31,17 +31,27 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 
 在 UOMP 的标准模型中，**Agent 是独立进程**，uomp CLI 是**用户侧的授权代理**，运行在 Memory Store / Guard 所在机器：
 
-```
-1. Agent 独立运行，暴露或发布其 uom.json
-2. uomp CLI（用户侧）发现 Agent，读取 uom.json
-3. CLI 调用 IdentityVerifier 验证 Agent 身份（可选），并向用户展示警告
-4. CLI 弹出授权面板，用户选择允许读取的 tags
-5. CLI 调用 AuthService.createSession() 创建 Session（status=created）
-6. CLI 调用 AuthService.grantSession(sessionId, grantedScopes) 签发 JWT
-7. CLI 把 UOM_TOKEN 交付给 Agent（通过回调、HTTP 或本地环境变量）
-8. Agent 使用 Token 访问 Memory Guard；Guard 校验 Token 并按 Scope 返回数据
-9. Agent 任务完成、超时或用户撤销时，Session 关闭（status=closed/revoked）
-```
+<div class="mermaid">
+sequenceDiagram
+    participant Agent as Agent（独立进程）
+    participant CLI as uomp CLI（用户侧）
+    participant Auth as Auth Service
+    participant Guard as Memory Guard
+    participant Store as Memory Store
+
+    Agent->>CLI: 1. 提供 uom.json
+    CLI->>CLI: 2. 身份验证（可选）
+    CLI->>CLI: 3. 用户授权面板
+    CLI->>Auth: 4. createSession(status=created)
+    CLI->>Auth: 5. grantSession(grantedScopes)
+    Auth-->>CLI: UOM_TOKEN
+    CLI-->>Agent: 6. 交付 UOM_TOKEN
+    Agent->>Guard: 7. HTTP + Authorization
+    Guard->>Guard: 校验 Token & Scope
+    Guard->>Store: 按 scope 读取
+    Store-->>Guard: Memory Items
+    Guard-->>Agent: 返回过滤后数据
+</div>
 
 关键点：
 
@@ -53,13 +63,22 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 
 MVP 中的 `pnpm cli run ./examples/calendar-agent` 是为了降低上手门槛提供的快捷方式：
 
-```
-1. CLI 读取 ./examples/calendar-agent/uom.json
-2. CLI 完成身份验证、用户授权、Token 签发
-3. CLI 启动本地 MemoryGuard
-4. CLI 以子进程启动 Agent，注入 UOM_TOKEN 与 UOMP_BASE_URL
-5. Agent 运行结束后，CLI 关闭 Session
-```
+<div class="mermaid">
+sequenceDiagram
+    participant CLI as uomp CLI
+    participant Auth as Auth Service
+    participant Guard as Memory Guard
+    participant Agent as Agent（子进程）
+
+    CLI->>CLI: 读取 uom.json
+    CLI->>Auth: createSession & grantSession
+    Auth-->>CLI: UOM_TOKEN
+    CLI->>Guard: 启动本地 Guard
+    CLI->>Agent: 子进程启动，注入 UOM_TOKEN
+    Agent->>Guard: 使用 Token 访问数据
+    Agent-->>CLI: 进程退出
+    CLI->>Auth: closeSession
+</div>
 
 这种模式把「授权代理」和「Agent 启动器」合并了，仅适用于本机开发测试，不是生产架构。
 

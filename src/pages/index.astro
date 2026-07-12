@@ -59,6 +59,22 @@ import { baseUrl } from '../utils/base.ts';
   <section class="alt">
     <div class="container">
       <h2>工作流程</h2>
+      <div class="mermaid">
+flowchart LR
+    subgraph UserSide["用户本机 / User Side"]
+        UI["uomp CLI / GUI"]
+        Auth["Auth Service"]
+        Guard["Memory Guard"]
+        Store[("Memory Store")]
+    end
+    Agent["Agent\n(独立进程)"]
+
+    Agent -->|"1. 提供 uom.json"| UI
+    UI -->|"2. 确认授权范围"| Auth
+    Auth -->|"3. 签发 Capability Token"| Agent
+    Agent -->|"4. HTTP + Token"| Guard
+    Guard -->|"5. 按 scope 过滤"| Store
+      </div>
       <ol>
         <li><strong>发现 Agent</strong>：用户在 Agent 市场（如基于 ERC8004 的 Registry）发现合适的 Agent。</li>
         <li><strong>查看声明</strong>：Agent 通过 <code>uom.json</code> 声明身份和请求的记忆范围。</li>
