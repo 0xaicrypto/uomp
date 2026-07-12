@@ -225,26 +225,30 @@ The Capability Token uses JWT format and is signed by the Auth Service's private
 
 ### 7.2 Claims
 
+The UOMP Capability Token JWT payload uses the following custom claims (snake_case). The Auth Service MUST also set the standard JWT claims `iat` (issued at) and `exp` (expiration time); the Memory Guard MUST accept and validate both `exp` and `expires_at`.
+
 | Claim | Type | Required | Description |
 |-------|------|----------|-------------|
 | `version` | string | MUST | Token format version. |
 | `session_id` | string | MUST | Bound Session. |
 | `agent_id` | string | MUST | Agent identifier. |
-| `issued_at` | ISO8601 | MUST | Issue time. |
-| `expires_at` | ISO8601 | MUST | Expiration time. |
+| `issued_at` | ISO8601 | MUST | Issue time, consistent with standard `iat`. |
+| `expires_at` | ISO8601 | MUST | Expiration time, consistent with standard `exp`. |
 | `scopes` | object | MUST | Read/write authorization scope. |
-| `limits` | object | OPTIONAL | Query count limits. |
+| `limits` | object | OPTIONAL | Query count limits. Written but not enforced in MVP. |
 | `profile` | string | OPTIONAL | `local` or `remote`, default `local`. |
-| `audience` | string | OPTIONAL | Memory Guard endpoint bound to the Token. |
+| `audience` | string | OPTIONAL | Memory Guard endpoint bound to the Token. REQUIRED for Remote Profile. |
 | `allowed_endpoints` | string[] | OPTIONAL | Network location whitelist for Token use. |
+
+The JWT Header SHOULD include `alg` and `kid` to support key rotation and verification.
 
 ### 7.3 Validity
 
 Upon receiving a Token, the Auth Service and Memory Guard MUST perform the following validations:
 
 1. Token signature is valid.
-2. Current time is before `expires_at`.
-3. `session_id` is in the `active` state.
+2. Current time is before `expires_at` / standard `exp` claim.
+3. The Session bound to the Token has not been closed or revoked (in the MVP this is implemented via a blacklist table; production implementations SHOULD explicitly query Session status).
 4. Token is not in the blacklist.
 5. `profile` matches the current deployment profile.
 6. `audience` matches the current Memory Guard endpoint (REQUIRED for Remote Profile).
@@ -475,13 +479,15 @@ Response:
 Memory Guard MUST determine access permissions in the following order:
 
 1. Token signature is valid.
-2. Token has not expired.
-3. Session is in the `active` state.
+2. Token has not expired (validate both the standard `exp` claim and `expires_at`).
+3. The Session bound to the Token has not been closed or revoked (MVP uses a blacklist table).
 4. Token is not in the blacklist.
-5. Query quota has not been exhausted.
+5. Query quota has not been exhausted (reserved in MVP, not enforced).
 6. Target Key or Tag is within the authorized scope for the action.
-7. Target Key or Tag is not explicitly denied.
+7. Target Key or Tag is not explicitly denied (`deny_keys` / `deny_tags` take precedence over allow lists).
 8. `sensitivity=high` Memory Items cannot be accessed via tag authorization and MUST match `keys`.
+
+For `GET /v1/memory?tag=:tag`, Guard MUST first validate that the tag itself is allowed; each returned Memory Item MUST then be filtered again using key-level rules (applying deny, keys, and sensitivity rules).
 
 If any check fails, MUST return `ACCESS_DENIED` and record an audit log.
 
@@ -562,12 +568,18 @@ After a Session is revoked, the corresponding Token MUST become invalid immediat
 
 ### 13.2 Token Delivery
 
-The MVP implementation RECOMMENDS passing the Token via environment variable:
+In the Local Profile, the Token is issued by the Auth Service / CLI on the user's machine and injected into the Agent process via environment variables:
 
 ```bash
 export UOM_TOKEN="<capability-token>"
+export UOMP_BASE_URL="http://127.0.0.1:9374"
 uom-calendar-agent
 ```
+
+- `UOM_TOKEN`: The Capability Token the Agent uses to access Guard.
+- `UOMP_BASE_URL`: The Guard endpoint address, defaulting to `http://127.0.0.1:9374` in Local Profile.
+
+The user UI (e.g. CLI) runs on the same host as the Memory Store / Guard, performs identity verification and authorization, issues the Token, and only then hands the Token to the Agent. The Agent itself does not participate in authorization decisions.
 
 ## 14. Remote Profile
 
@@ -600,7 +612,7 @@ Specific modes are chosen by the implementation; the protocol does not mandate t
 
 ### 15.1 Overview
 
-UOMP supports multiple Agent publisher identity verification mechanisms. Users/host programs can choose which methods to trust.
+UOMP supports multiple Agent publisher identity verification mechanisms. Identity verification is performed by the **UI/CLI on the user's machine**; the Agent process itself does not perform identity verification and must not have access to user private keys or authorization decisions.
 
 ### 15.2 Supported Methods
 
@@ -613,16 +625,16 @@ UOMP supports multiple Agent publisher identity verification mechanisms. Users/h
 
 ### 15.3 Verification Process
 
-1. Read the `identity` field in `uom.json`.
+1. The UI/CLI on the user's machine reads the `identity` field in `uom.json`.
 2. Select the verification method according to `verification_methods`.
 3. Verify the signature or proof of `uom.json`.
-4. Only allow Session creation after successful verification.
+4. Present the result to the user; only after user confirmation may a Session be created and a Token issued.
 
 ### 15.4 Trust Policy
 
 - Users MAY configure a trust list: trusted DIDs, GPG Key IDs, CAs, Registries.
-- Unverified Agents MAY be allowed to run, but the authorization panel MUST warn "unverified publisher".
-- Enterprise deployments MAY mandate specific verification methods.
+- Agents that fail identity verification MAY be allowed to run, but the authorization panel on the user's machine MUST prompt "unverified publisher".
+- Enterprise deployments MAY mandate specific verification methods; Agents that fail verification MUST NOT receive a Token.
 
 ## 16. Agent Registry
 
