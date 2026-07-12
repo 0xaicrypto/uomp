@@ -7,4 +7,5 @@ export default defineConfig({
   base: '/uomp',
   integrations: [mdx()],
   output: 'static',
+  trailingSlash: 'always',
 });
