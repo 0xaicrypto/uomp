@@ -488,6 +488,25 @@ footer {
   margin: 0 auto;
 }
 
+/* Demo video */
+.video-demo {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.video-demo video {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  display: block;
+  margin: 0 auto;
+}
+
 /* CTA section */
 .cta-section {
   text-align: center;
