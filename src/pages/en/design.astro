@@ -1,0 +1,16 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Content } from '../../content/design/design.en.md';
+import { baseUrl } from '../../utils/base.ts';
+---
+
+<Layout
+  title="UOMP Core Architecture Design - User-Owned Memory Protocol"
+  description="High-level architecture concepts of UOMP: agent declaration, user authorization, capability token, and memory guard."
+  lang="en"
+  switchHref={`${baseUrl}design/`}
+>
+  <div class="container spec-content">
+    <Content />
+  </div>
+</Layout>
