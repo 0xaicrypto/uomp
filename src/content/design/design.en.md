@@ -27,27 +27,45 @@ This document explains how the UOMP **reference implementation** [`uomp-mvp`](ht
 
 ---
 
-## 2. Complete Data Flow
+## 2. Standard Architecture Flow
 
-Using `pnpm cli run ./examples/calendar-agent` as an example:
+In UOMP's standard model, the **Agent is an independent process**, and the uomp CLI is the **user-side authorization proxy** running on the machine where the Memory Store / Guard lives:
 
 ```
-1. CLI reads examples/calendar-agent/uom.json
-2. CLI calls IdentityVerifier to verify Agent identity (optional), showing a warning to the user
-3. CLI prompts the user to select allowed tags
-4. CLI calls AuthService.createSession() (status=created)
-5. CLI calls AuthService.grantSession(sessionId, grantedScopes) to issue JWT
-6. CLI starts local MemoryGuard (listening on 127.0.0.1:9374)
-7. CLI spawns the Agent process, only injecting UOM_TOKEN and UOMP_BASE_URL
-8. Agent calls Guard API via SDK; Guard validates token and returns scoped data
-9. After Agent exits, CLI closes the Session (status=closed)
+1. Agent runs independently and exposes or publishes its uom.json
+2. uomp CLI (user side) discovers the Agent and reads uom.json
+3. CLI calls IdentityVerifier to verify Agent identity (optional), showing a warning to the user
+4. CLI prompts the user to select allowed tags
+5. CLI calls AuthService.createSession() (status=created)
+6. CLI calls AuthService.grantSession(sessionId, grantedScopes) to issue JWT
+7. CLI delivers the UOM_TOKEN to the Agent (via callback, HTTP, or local environment variable)
+8. Agent uses the Token to access Memory Guard; Guard validates the Token and returns scoped data
+9. When the Agent task completes, times out, or the user revokes access, the Session closes (status=closed/revoked)
 ```
 
-Key point: **Identity verification, authorization prompt, and Token issuance all happen in the CLI (on the user's side, where Memory lives); the Agent process only uses the Token to read data.**
+Key points:
+
+- **Agent and CLI are separate processes**; the Agent does not depend on the CLI to start.
+- **Identity verification, authorization prompt, and Token issuance all happen in the CLI (on the user's side, where Memory lives).**
+- **The Agent only receives the Token and uses it to read data**; it does not participate in authorization decisions.
+
+### 2.1 Local Development Convenience Mode
+
+The MVP's `pnpm cli run ./examples/calendar-agent` is a shortcut to lower the barrier to entry:
+
+```
+1. CLI reads ./examples/calendar-agent/uom.json
+2. CLI performs identity verification, user authorization, and Token issuance
+3. CLI starts local MemoryGuard
+4. CLI spawns the Agent as a child process, injecting UOM_TOKEN and UOMP_BASE_URL
+5. After the Agent finishes, CLI closes the Session
+```
+
+This mode merges the "authorization proxy" and "Agent launcher" roles and is only suitable for local development and testing, not production architecture.
 
 Key code entry points:
 
-- `packages/cli/src/commands/run.ts`: orchestrates the whole flow
+- `packages/cli/src/commands/run.ts`: orchestrates the local development mode
 - `packages/auth/src/index.ts`: `AuthService`
 - `packages/guard/src/index.ts`: `MemoryGuard`
 - `packages/token/src/index.ts`: `JWTTokenIssuer`

@@ -27,27 +27,45 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 
 ---
 
-## 2. 完整数据流
+## 2. 标准架构流程
 
-以 `pnpm cli run ./examples/calendar-agent` 为例：
+在 UOMP 的标准模型中，**Agent 是独立进程**，uomp CLI 是**用户侧的授权代理**，运行在 Memory Store / Guard 所在机器：
 
 ```
-1. CLI 读取 examples/calendar-agent/uom.json
-2. CLI 调用 IdentityVerifier 验证 Agent 身份（可选），并向用户展示警告
-3. CLI 弹出授权面板，用户选择允许读取的 tags
-4. CLI 调用 AuthService.createSession() 创建 Session（status=created）
-5. CLI 调用 AuthService.grantSession(sessionId, grantedScopes) 签发 JWT
-6. CLI 启动本地 MemoryGuard（监听 127.0.0.1:9374）
-7. CLI 以子进程启动 Agent，仅注入 UOM_TOKEN 与 UOMP_BASE_URL
-8. Agent 通过 SDK 调用 Guard API，Guard 校验 Token 并按 Scope 返回数据
-9. Agent 退出后，CLI 关闭 Session（status=closed）
+1. Agent 独立运行，暴露或发布其 uom.json
+2. uomp CLI（用户侧）发现 Agent，读取 uom.json
+3. CLI 调用 IdentityVerifier 验证 Agent 身份（可选），并向用户展示警告
+4. CLI 弹出授权面板，用户选择允许读取的 tags
+5. CLI 调用 AuthService.createSession() 创建 Session（status=created）
+6. CLI 调用 AuthService.grantSession(sessionId, grantedScopes) 签发 JWT
+7. CLI 把 UOM_TOKEN 交付给 Agent（通过回调、HTTP 或本地环境变量）
+8. Agent 使用 Token 访问 Memory Guard；Guard 校验 Token 并按 Scope 返回数据
+9. Agent 任务完成、超时或用户撤销时，Session 关闭（status=closed/revoked）
 ```
 
-关键点：**身份验证、授权面板、Token 签发都发生在 CLI（用户侧，即 Memory 所在机器），Agent 进程只负责使用 Token 读取数据。**
+关键点：
+
+- **Agent 与 CLI 是独立进程**，Agent 不依赖 CLI 启动。
+- **身份验证、授权面板、Token 签发都发生在 CLI（用户侧，即 Memory 所在机器）。**
+- **Agent 只接收 Token 并使用它读取数据**，不参与授权决策。
+
+### 2.1 本地开发便利模式
+
+MVP 中的 `pnpm cli run ./examples/calendar-agent` 是为了降低上手门槛提供的快捷方式：
+
+```
+1. CLI 读取 ./examples/calendar-agent/uom.json
+2. CLI 完成身份验证、用户授权、Token 签发
+3. CLI 启动本地 MemoryGuard
+4. CLI 以子进程启动 Agent，注入 UOM_TOKEN 与 UOMP_BASE_URL
+5. Agent 运行结束后，CLI 关闭 Session
+```
+
+这种模式把「授权代理」和「Agent 启动器」合并了，仅适用于本机开发测试，不是生产架构。
 
 对应代码入口：
 
-- `packages/cli/src/commands/run.ts`：整个流程的编排
+- `packages/cli/src/commands/run.ts`：本地开发模式的编排
 - `packages/auth/src/index.ts`：`AuthService`
 - `packages/guard/src/index.ts`：`MemoryGuard`
 - `packages/token/src/index.ts`：`JWTTokenIssuer`

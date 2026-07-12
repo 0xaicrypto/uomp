@@ -85,12 +85,15 @@ UOMP's design goals are:
 
 ### 5.2 Flow
 
-1. The Agent provides a `uom.json` declaring its identity and default requested memory scope.
-2. The user chooses to connect the Agent, and the Auth Service creates a Session in the `created` state.
+1. The Agent runs as an independent process and provides a `uom.json` declaring its identity and default requested memory scope.
+2. The user discovers or connects to the Agent through the local UI/CLI, and the Auth Service creates a Session in the `created` state.
 3. After the user confirms or adjusts the authorization scope, the Auth Service issues a Capability Token.
-4. The Session enters the `active` state, and the Agent accesses Memory Guard via the HTTP API with the Token.
-5. Memory Guard validates the Token, filters data by scope, returns results, and records audit logs.
-6. When the Agent task completes, times out, or the user revokes, the Session closes and the Token becomes invalid.
+4. The Session enters the `active` state, and the Token is delivered to the Agent.
+5. The Agent accesses Memory Guard via the HTTP API with the Token.
+6. Memory Guard validates the Token, filters data by scope, returns results, and records audit logs.
+7. When the Agent task completes, times out, or the user revokes, the Session closes and the Token becomes invalid.
+
+The Agent and UI/CLI are separate processes. The UI/CLI runs on the user's machine where the Memory Store / Guard lives, and is responsible for identity verification, authorization decisions, and Token issuance. The Agent only uses the Token to access data.
 
 ### 5.3 Profiles
 

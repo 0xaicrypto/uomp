@@ -85,12 +85,15 @@ UOMP 的设计目标是：
 
 ### 5.2 Flow
 
-1. Agent 提供 `uom.json` 声明其身份和默认请求的记忆范围。
-2. 用户选择连接 Agent，Auth Service 创建 Session（`created` 状态）。
+1. Agent 作为独立进程运行，提供 `uom.json` 声明其身份和默认请求的记忆范围。
+2. 用户通过本机 UI/CLI 发现或连接 Agent，Auth Service 创建 Session（`created` 状态）。
 3. 用户确认或调整授权范围后，Auth Service 签发 Capability Token。
-4. Session 进入 `active` 状态，Agent 通过 HTTP API 携带 Token 访问 Memory Guard。
-5. Memory Guard 校验 Token，按 scope 过滤数据，返回结果并记录审计日志。
-6. Agent 任务完成、超时、或用户撤销时，Session 关闭，Token 失效。
+4. Session 进入 `active` 状态，Token 被交付给 Agent。
+5. Agent 通过 HTTP API 携带 Token 访问 Memory Guard。
+6. Memory Guard 校验 Token，按 scope 过滤数据，返回结果并记录审计日志。
+7. Agent 任务完成、超时、或用户撤销时，Session 关闭，Token 失效。
+
+Agent 与 UI/CLI 是独立进程。UI/CLI 运行在 Memory Store / Guard 所在的用户本机，负责身份验证、授权决策和 Token 签发；Agent 只负责使用 Token 访问数据。
 
 ### 5.3 Profiles
 
