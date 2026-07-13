@@ -4,27 +4,75 @@ import { baseUrl } from '../utils/base.ts';
 ---
 
 <Layout title="UOMP - User-Owned Memory Protocol" switchHref={`${baseUrl}en/`}>
-  <section class="hero">
-    <div class="container">
-      <span class="badge">Draft-00</span>
-      <h1>你的记忆，由你授权</h1>
-      <p>
-        UOMP（User-Owned Memory Protocol）是一种用户主权型授权协议，
-        让用户能够按会话、按范围、按标签临时授权 AI Agent 访问个人记忆数据。
-      </p>
-      <div class="cta">
-        <a href={`${baseUrl}spec/`} class="btn btn-primary">阅读规范</a>
-        <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener" class="btn btn-secondary">GitHub 讨论</a>
+  <section class="hero" style="padding-bottom: 0; border-bottom: none;">
+    <div class="hero-eyebrow">
+      <div class="ey-dot"></div>
+      Draft-00 · 开放协议草案
+    </div>
+    <h1>
+      你的记忆，<br/><em>由你授权。</em>
+    </h1>
+    <p>
+      UOMP 让用户能够按会话、按标签、按范围临时授权 AI Agent 访问个人记忆数据——记忆留在本地，权限随时可撤销。
+    </p>
+    <div class="hero-btns">
+      <a href={`${baseUrl}spec/`} class="btn-h1">阅读规范 →</a>
+      <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener" class="btn-h2">GitHub 讨论</a>
+    </div>
+
+    <div class="window-wrap">
+      <div class="window">
+        <div class="window-bar">
+          <div class="window-dots">
+            <div class="window-dot r"></div>
+            <div class="window-dot y"></div>
+            <div class="window-dot g"></div>
+          </div>
+          <div class="window-url">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            uomp run ./examples/calendar-agent
+          </div>
+        </div>
+        <div class="window-body">
+          <video autoplay muted loop playsinline preload="metadata" width="100%">
+            <source src="/demo.mp4" type="video/mp4" />
+            你的浏览器不支持视频播放。
+          </video>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-val">本地优先</span>
+          <span class="stat-lbl">数据保留在用户设备</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">最小授权</span>
+          <span class="stat-lbl">按 tag / key 精确控制</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">短期会话</span>
+          <span class="stat-lbl">JWT Capability Token</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">可审计</span>
+          <span class="stat-lbl">每次访问记录日志</span>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="alt">
     <div class="container">
-      <h2>为什么需要 UOMP？</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">01</div>
+        <span class="sec-tag">为什么需要 UOMP</span>
+      </div>
+      <h2>数据留在本地，<br/><em>授权交给你。</em></h2>
       <p>
-        当今 AI Agent 需要访问大量个人数据才能提供个性化服务，但现有方案往往要求用户将数据上传至第三方服务器。
-        这导致用户失去对数据的控制，Agent 可能长期保留数据，且用户难以审计访问行为。
+        当今 AI Agent 需要访问大量个人数据才能提供个性化服务，但现有方案往往要求用户将数据上传至第三方服务器。这导致用户失去对数据的控制，Agent 可能长期保留数据，且用户难以审计访问行为。
       </p>
       <p>
         UOMP 改变这一现状：记忆数据始终保留在用户本地，Agent 只能获得临时、最小化、可审计的访问权限。
@@ -34,25 +82,51 @@ import { baseUrl } from '../utils/base.ts';
 
   <section>
     <div class="container">
-      <h2>核心原则</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">02</div>
+        <span class="sec-tag">核心原则</span>
+      </div>
+      <h2>四个原则，<br/><em>一个目标。</em></h2>
       <div class="grid">
         <div class="card">
-          <div class="card-icon">🔒</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
           <h3>用户主权</h3>
           <p>记忆数据始终由用户拥有和控制，不迁移到 Agent 提供商。</p>
         </div>
         <div class="card">
-          <div class="card-icon">🎯</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
           <h3>最小授权</h3>
           <p>按标签（Tag）或键（Key）精确授权，未授权数据默认不可访问。</p>
         </div>
         <div class="card">
-          <div class="card-icon">⏱️</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
           <h3>会话隔离</h3>
           <p>每个授权绑定到独立 Session，会话结束或撤销后立即失效。</p>
         </div>
         <div class="card">
-          <div class="card-icon">📋</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+          </div>
           <h3>可审计</h3>
           <p>所有访问行为记录审计日志，用户可追踪 Agent 查看了什么。</p>
         </div>
@@ -62,46 +136,50 @@ import { baseUrl } from '../utils/base.ts';
 
   <section class="alt">
     <div class="container">
-      <h2>工作流程</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">03</div>
+        <span class="sec-tag">工作流程</span>
+      </div>
+      <h2>五步完成，<br/><em>一次授权。</em></h2>
       <div class="diagram">
         <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP 工作流程图">
           <defs>
             <marker id="arrowhead-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+              <polygon points="0 0, 10 3.5, 0 7" fill="#0A0A0A" />
             </marker>
           </defs>
-          <rect x="260" y="20" width="440" height="220" rx="12" fill="#12121a" stroke="#2a2a3a" stroke-width="2" />
-          <text x="480" y="45" text-anchor="middle" fill="#a1a1aa" font-size="12" font-family="system-ui, sans-serif">用户本机 / User Host</text>
+          <rect x="260" y="20" width="440" height="220" rx="12" fill="#FFFFFF" stroke="#D4D4D0" stroke-width="2" />
+          <text x="480" y="45" text-anchor="middle" fill="#6B7280" font-size="12" font-family="Inter, system-ui, sans-serif">用户本机 / User Host</text>
 
-          <rect x="20" y="100" width="110" height="60" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="75" y="135" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Agent</text>
+          <rect x="20" y="100" width="110" height="60" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="75" y="135" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Agent</text>
 
-          <rect x="300" y="60" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="360" y="87" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">uomp CLI / GUI</text>
+          <rect x="300" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="360" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">uomp CLI</text>
 
-          <rect x="560" y="60" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="620" y="87" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Auth Service</text>
+          <rect x="560" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="620" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Auth Service</text>
 
-          <rect x="300" y="170" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="360" y="197" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Memory Guard</text>
+          <rect x="300" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="360" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Guard</text>
 
-          <rect x="560" y="170" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="620" y="197" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Memory Store</text>
+          <rect x="560" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="620" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Store</text>
 
-          <line x1="130" y1="115" x2="300" y2="90" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-zh)" />
-          <text x="210" y="95" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">1. uom.json</text>
+          <line x1="130" y1="115" x2="300" y2="90" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-zh)" />
+          <text x="210" y="95" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">1. uom.json</text>
 
-          <line x1="420" y1="82" x2="560" y2="82" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-zh)" />
-          <text x="490" y="75" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">2. 授权</text>
+          <line x1="420" y1="82" x2="560" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-zh)" />
+          <text x="490" y="75" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">2. 授权</text>
 
-          <line x1="620" y1="104" x2="130" y2="145" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-zh)" />
-          <text x="380" y="155" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">3. Capability Token</text>
+          <line x1="620" y1="104" x2="130" y2="145" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-zh)" />
+          <text x="380" y="155" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">3. Capability Token</text>
 
-          <line x1="130" y1="155" x2="300" y2="192" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-zh)" />
-          <text x="210" y="185" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">4. HTTP + Token</text>
+          <line x1="130" y1="155" x2="300" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-zh)" />
+          <text x="210" y="185" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">4. HTTP + Token</text>
 
-          <line x1="420" y1="192" x2="560" y2="192" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-zh)" />
-          <text x="490" y="215" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">5. 按 scope 过滤</text>
+          <line x1="420" y1="192" x2="560" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-zh)" />
+          <text x="490" y="215" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">5. 按 scope 过滤</text>
         </svg>
       </div>
       <ol>
@@ -116,8 +194,12 @@ import { baseUrl } from '../utils/base.ts';
 
   <section>
     <div class="container">
-      <h2>CLI 演示</h2>
-      <p>30 秒看完整流程：初始化数据目录、添加记忆、授权并运行示例 Agent。</p>
+      <div class="sec-eyebrow">
+        <div class="sec-num">04</div>
+        <span class="sec-tag">CLI 演示</span>
+      </div>
+      <h2>30 秒看完整流程，<br/><em>从初始化到运行 Agent。</em></h2>
+      <p>初始化数据目录、添加记忆、授权并运行示例 Agent 的完整命令行演示。</p>
       <div class="video-demo">
         <video controls autoplay muted loop playsinline preload="metadata" width="100%">
           <source src="/demo.mp4" type="video/mp4" />
@@ -129,20 +211,43 @@ import { baseUrl } from '../utils/base.ts';
 
   <section class="alt">
     <div class="container">
-      <h2>谁应该关注 UOMP？</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">05</div>
+        <span class="sec-tag">谁应该关注</span>
+      </div>
+      <h2>为三类人设计，<br/><em>为一个开放标准而建。</em></h2>
       <div class="grid">
         <div class="card">
-          <div class="card-icon">👤</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
           <h3>用户</h3>
           <p>重新掌控个人数据，明确知道哪些 Agent 访问了什么。</p>
         </div>
         <div class="card">
-          <div class="card-icon">🤖</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="10" rx="2"/>
+              <circle cx="9" cy="15" r="1.5" fill="#0A0A0A" stroke="none"/>
+              <circle cx="15" cy="15" r="1.5" fill="#0A0A0A" stroke="none"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+          </div>
           <h3>Agent 开发者</h3>
           <p>通过标准协议访问用户授权的数据，无需自建数据存储。</p>
         </div>
         <div class="card">
-          <div class="card-icon">🔬</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 3v18"/>
+              <path d="M18 3v18"/>
+              <path d="M3 6h18"/>
+              <path d="M3 18h18"/>
+            </svg>
+          </div>
           <h3>协议研究者</h3>
           <p>参与设计一个开放、去中心化的 Agent 授权标准。</p>
         </div>
@@ -150,13 +255,13 @@ import { baseUrl } from '../utils/base.ts';
     </div>
   </section>
 
-  <section class="cta-section">
+  <section class="cta-section" style="border-bottom: none;">
     <div class="container">
       <h2>开始探索 UOMP</h2>
       <p>阅读协议草案，查看参考实现，或加入 GitHub 讨论，一起构建用户主权的 Agent 记忆授权标准。</p>
-      <div class="cta">
-        <a href={`${baseUrl}spec/`} class="btn btn-primary">阅读规范</a>
-        <a href="https://github.com/0xaicrypto/uomp-core" target="_blank" rel="noopener" class="btn btn-secondary">查看实现</a>
+      <div class="hero-btns">
+        <a href={`${baseUrl}spec/`} class="btn-h1">阅读规范 →</a>
+        <a href="https://github.com/0xaicrypto/uomp-core" target="_blank" rel="noopener" class="btn-h2">查看实现</a>
       </div>
     </div>
   </section>

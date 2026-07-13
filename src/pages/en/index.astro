@@ -9,59 +9,129 @@ import { baseUrl } from '../../utils/base.ts';
   lang="en"
   switchHref={baseUrl}
 >
-  <section class="hero">
-    <div class="container">
-      <span class="badge">Draft-00</span>
-      <h1>Your Memory, Your Authorization</h1>
-      <p>
-        UOMP (User-Owned Memory Protocol) is a user-sovereign authorization protocol that lets you
-        temporarily grant AI Agents access to your personal memory data—scoped by tag or key,
-        bound to a session, and automatically revoked when the session ends.
-      </p>
-      <div class="cta">
-        <a href={`${baseUrl}en/spec/`} class="btn btn-primary">Read the Spec</a>
-        <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener" class="btn btn-secondary">GitHub Discussions</a>
+  <section class="hero" style="padding-bottom: 0; border-bottom: none;">
+    <div class="hero-eyebrow">
+      <div class="ey-dot"></div>
+      Draft-00 · Open Protocol Draft
+    </div>
+    <h1>
+      Your Memory,<br/><em>Your Authorization.</em>
+    </h1>
+    <p>
+      UOMP lets you temporarily grant AI Agents access to your personal memory data—scoped by tag or key, bound to a session, and automatically revoked when the session ends.
+    </p>
+    <div class="hero-btns">
+      <a href={`${baseUrl}en/spec/`} class="btn-h1">Read the Spec →</a>
+      <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener" class="btn-h2">GitHub Discussions</a>
+    </div>
+
+    <div class="window-wrap">
+      <div class="window">
+        <div class="window-bar">
+          <div class="window-dots">
+            <div class="window-dot r"></div>
+            <div class="window-dot y"></div>
+            <div class="window-dot g"></div>
+          </div>
+          <div class="window-url">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            uomp run ./examples/calendar-agent
+          </div>
+        </div>
+        <div class="window-body">
+          <video autoplay muted loop playsinline preload="metadata" width="100%">
+            <source src="/demo.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-val">Local-first</span>
+          <span class="stat-lbl">Data stays on user device</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">Least privilege</span>
+          <span class="stat-lbl">Scoped by tag / key</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">Short sessions</span>
+          <span class="stat-lbl">JWT Capability Token</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">Auditable</span>
+          <span class="stat-lbl">Every access logged</span>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="alt">
     <div class="container">
-      <h2>Why UOMP?</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">01</div>
+        <span class="sec-tag">Why UOMP</span>
+      </div>
+      <h2>Data stays local,<br/><em>authorization stays with you.</em></h2>
       <p>
-        Today's AI Agents need access to vast amounts of personal data to provide personalized
-        service. Existing solutions usually require users to upload data to third-party servers,
-        which means users lose direct control, Agents may retain data indefinitely, and access is
-        hard to audit.
+        Today's AI Agents need access to vast amounts of personal data to provide personalized service. Existing solutions usually require users to upload data to third-party servers, which means users lose direct control, Agents may retain data indefinitely, and access is hard to audit.
       </p>
       <p>
-        UOMP changes this: your memory stays on your device, and Agents only receive temporary,
-        minimal, auditable access.
+        UOMP changes this: your memory stays on your device, and Agents only receive temporary, minimal, auditable access.
       </p>
     </div>
   </section>
 
   <section>
     <div class="container">
-      <h2>Core Principles</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">02</div>
+        <span class="sec-tag">Core Principles</span>
+      </div>
+      <h2>Four principles,<br/><em>one goal.</em></h2>
       <div class="grid">
         <div class="card">
-          <div class="card-icon">🔒</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
           <h3>User Sovereignty</h3>
           <p>You always own and control your memory data. It never moves to an Agent provider.</p>
         </div>
         <div class="card">
-          <div class="card-icon">🎯</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
           <h3>Least Privilege</h3>
           <p>Authorize by tag or exact key. Unauthorized data is inaccessible by default.</p>
         </div>
         <div class="card">
-          <div class="card-icon">⏱️</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
           <h3>Session Isolation</h3>
           <p>Each grant is bound to an independent session. Access ends when the session ends.</p>
         </div>
         <div class="card">
-          <div class="card-icon">📋</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+          </div>
           <h3>Auditable</h3>
           <p>Every access is logged so you can see exactly what each Agent read or wrote.</p>
         </div>
@@ -71,46 +141,50 @@ import { baseUrl } from '../../utils/base.ts';
 
   <section class="alt">
     <div class="container">
-      <h2>How It Works</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">03</div>
+        <span class="sec-tag">How It Works</span>
+      </div>
+      <h2>Five steps,<br/><em>one authorization.</em></h2>
       <div class="diagram">
         <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP workflow diagram">
           <defs>
             <marker id="arrowhead-en" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+              <polygon points="0 0, 10 3.5, 0 7" fill="#0A0A0A" />
             </marker>
           </defs>
-          <rect x="260" y="20" width="440" height="220" rx="12" fill="#12121a" stroke="#2a2a3a" stroke-width="2" />
-          <text x="480" y="45" text-anchor="middle" fill="#a1a1aa" font-size="12" font-family="system-ui, sans-serif">User Host</text>
+          <rect x="260" y="20" width="440" height="220" rx="12" fill="#FFFFFF" stroke="#D4D4D0" stroke-width="2" />
+          <text x="480" y="45" text-anchor="middle" fill="#6B7280" font-size="12" font-family="Inter, system-ui, sans-serif">User Host</text>
 
-          <rect x="20" y="100" width="110" height="60" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="75" y="135" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Agent</text>
+          <rect x="20" y="100" width="110" height="60" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="75" y="135" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Agent</text>
 
-          <rect x="300" y="60" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="360" y="87" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">uomp CLI / GUI</text>
+          <rect x="300" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="360" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">uomp CLI</text>
 
-          <rect x="560" y="60" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="620" y="87" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Auth Service</text>
+          <rect x="560" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="620" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Auth Service</text>
 
-          <rect x="300" y="170" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="360" y="197" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Memory Guard</text>
+          <rect x="300" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="360" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Guard</text>
 
-          <rect x="560" y="170" width="120" height="44" rx="8" fill="#0a0a0f" stroke="#22d3ee" stroke-width="2" />
-          <text x="620" y="197" text-anchor="middle" fill="#e4e4e7" font-size="13" font-family="system-ui, sans-serif">Memory Store</text>
+          <rect x="560" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
+          <text x="620" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Store</text>
 
-          <line x1="130" y1="115" x2="300" y2="90" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="210" y="95" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">1. uom.json</text>
+          <line x1="130" y1="115" x2="300" y2="90" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
+          <text x="210" y="95" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">1. uom.json</text>
 
-          <line x1="420" y1="82" x2="560" y2="82" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="490" y="75" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">2. authorize</text>
+          <line x1="420" y1="82" x2="560" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
+          <text x="490" y="75" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">2. authorize</text>
 
-          <line x1="620" y1="104" x2="130" y2="145" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="380" y="155" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">3. Capability Token</text>
+          <line x1="620" y1="104" x2="130" y2="145" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
+          <text x="380" y="155" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">3. Capability Token</text>
 
-          <line x1="130" y1="155" x2="300" y2="192" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="210" y="185" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">4. HTTP + Token</text>
+          <line x1="130" y1="155" x2="300" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
+          <text x="210" y="185" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">4. HTTP + Token</text>
 
-          <line x1="420" y1="192" x2="560" y2="192" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="490" y="215" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui, sans-serif">5. filter by scope</text>
+          <line x1="420" y1="192" x2="560" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
+          <text x="490" y="215" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">5. filter by scope</text>
         </svg>
       </div>
       <ol>
@@ -125,8 +199,12 @@ import { baseUrl } from '../../utils/base.ts';
 
   <section>
     <div class="container">
-      <h2>CLI Demo</h2>
-      <p>30-second walkthrough: initialize the data directory, add memory, authorize and run the example Agent.</p>
+      <div class="sec-eyebrow">
+        <div class="sec-num">04</div>
+        <span class="sec-tag">CLI Demo</span>
+      </div>
+      <h2>30 seconds,<br/><em>from init to running an Agent.</em></h2>
+      <p>A full command-line walkthrough: initialize the data directory, add memory, authorize and run the example Agent.</p>
       <div class="video-demo">
         <video controls autoplay muted loop playsinline preload="metadata" width="100%">
           <source src="/demo.mp4" type="video/mp4" />
@@ -138,20 +216,43 @@ import { baseUrl } from '../../utils/base.ts';
 
   <section class="alt">
     <div class="container">
-      <h2>Who Is UOMP For?</h2>
+      <div class="sec-eyebrow">
+        <div class="sec-num">05</div>
+        <span class="sec-tag">Who Is UOMP For</span>
+      </div>
+      <h2>Built for three groups,<br/><em>for one open standard.</em></h2>
       <div class="grid">
         <div class="card">
-          <div class="card-icon">👤</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
           <h3>Users</h3>
           <p>Regain control over personal data and know exactly which Agents accessed what.</p>
         </div>
         <div class="card">
-          <div class="card-icon">🤖</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="10" rx="2"/>
+              <circle cx="9" cy="15" r="1.5" fill="#0A0A0A" stroke="none"/>
+              <circle cx="15" cy="15" r="1.5" fill="#0A0A0A" stroke="none"/>
+              <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+            </svg>
+          </div>
           <h3>Agent Developers</h3>
           <p>Access user-authorized data through a standard protocol without building your own store.</p>
         </div>
         <div class="card">
-          <div class="card-icon">🔬</div>
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 3v18"/>
+              <path d="M18 3v18"/>
+              <path d="M3 6h18"/>
+              <path d="M3 18h18"/>
+            </svg>
+          </div>
           <h3>Protocol Researchers</h3>
           <p>Help design an open, decentralized authorization standard for Agent memory.</p>
         </div>
@@ -159,13 +260,13 @@ import { baseUrl } from '../../utils/base.ts';
     </div>
   </section>
 
-  <section class="cta-section">
+  <section class="cta-section" style="border-bottom: none;">
     <div class="container">
       <h2>Explore UOMP</h2>
       <p>Read the protocol draft, check out the reference implementation, or join the GitHub discussion to build a user-sovereign Agent memory authorization standard together.</p>
-      <div class="cta">
-        <a href={`${baseUrl}en/spec/`} class="btn btn-primary">Read the Spec</a>
-        <a href="https://github.com/0xaicrypto/uomp-core" target="_blank" rel="noopener" class="btn btn-secondary">View Implementation</a>
+      <div class="hero-btns">
+        <a href={`${baseUrl}en/spec/`} class="btn-h1">Read the Spec →</a>
+        <a href="https://github.com/0xaicrypto/uomp-core" target="_blank" rel="noopener" class="btn-h2">View Implementation</a>
       </div>
     </div>
   </section>

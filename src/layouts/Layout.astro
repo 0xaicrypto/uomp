@@ -18,7 +18,13 @@ const nav = {
     roadmap: '路线图',
     github: 'GitHub',
     switch: 'EN',
-    footer: 'UOMP 是一个开放协议草案。欢迎通过 <a href="https://github.com/0xaicrypto/uomp">GitHub</a> 参与讨论。',
+    brand: 'UOMP',
+    brandTagline: '用户主权型 Agent 记忆授权协议',
+    footerCols: {
+      protocol: { title: '协议', links: [{ t: '规范', h: `${baseUrl}spec/` }, { t: '实现设计', h: `${baseUrl}design/` }, { t: '路线图', h: `${baseUrl}roadmap/` }] },
+      community: { title: '社区', links: [{ t: 'GitHub 讨论', h: 'https://github.com/0xaicrypto/uomp' }, { t: '参考实现', h: 'https://github.com/0xaicrypto/uomp-core' }] },
+    },
+    footerBtm: '© UOMP 贡献者 · 开放协议草案',
   },
   en: {
     home: 'Home',
@@ -27,7 +33,13 @@ const nav = {
     roadmap: 'Roadmap',
     github: 'GitHub',
     switch: '中文',
-    footer: 'UOMP is an open protocol draft. Join the discussion on <a href="https://github.com/0xaicrypto/uomp">GitHub</a>.',
+    brand: 'UOMP',
+    brandTagline: 'User-sovereign Agent memory authorization protocol',
+    footerCols: {
+      protocol: { title: 'Protocol', links: [{ t: 'Spec', h: `${baseUrl}en/spec/` }, { t: 'Implementation', h: `${baseUrl}en/design/` }, { t: 'Roadmap', h: `${baseUrl}en/roadmap/` }] },
+      community: { title: 'Community', links: [{ t: 'GitHub Discussions', h: 'https://github.com/0xaicrypto/uomp' }, { t: 'Reference Implementation', h: 'https://github.com/0xaicrypto/uomp-core' }] },
+    },
+    footerBtm: '© UOMP contributors · Open protocol draft',
   },
 };
 
@@ -52,29 +64,74 @@ const isRoadmap = pathname.startsWith(`${baseUrl}roadmap/`) || pathname.startsWi
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href={`${baseUrl}styles/global.css`} />
   </head>
   <body>
-    <header>
-      <div class="container">
-        <a href={homeHref} class="logo">
-          <span>UOMP</span>
+    <div class="nav-outer">
+      <nav>
+        <a href={homeHref} class="nav-logo" aria-label={t.brand}>
+          <div class="nav-lm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span>{t.brand}</span>
         </a>
-        <nav>
-          <a href={homeHref} class={isHome ? 'active' : ''}>{t.home}</a>
-          <a href={specHref} class={isSpec ? 'active' : ''}>{t.spec}</a>
-          <a href={designHref} class={isDesign ? 'active' : ''}>{t.design}</a>
-          <a href={roadmapHref} class={isRoadmap ? 'active' : ''}>{t.roadmap}</a>
-          <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener">{t.github}</a>
-          <a href={resolvedSwitchHref} class="lang-switch">{t.switch}</a>
-        </nav>
-      </div>
-    </header>
+        <ul class="nav-links">
+          <li><a href={homeHref} class={isHome ? 'active' : ''}>{t.home}</a></li>
+          <li><a href={specHref} class={isSpec ? 'active' : ''}>{t.spec}</a></li>
+          <li><a href={designHref} class={isDesign ? 'active' : ''}>{t.design}</a></li>
+          <li><a href={roadmapHref} class={isRoadmap ? 'active' : ''}>{t.roadmap}</a></li>
+        </ul>
+        <div class="nav-r">
+          <a href={resolvedSwitchHref} class="btn-ng">{t.switch}</a>
+          <a href="https://github.com/0xaicrypto/uomp" target="_blank" rel="noopener" class="btn-np">{t.github}</a>
+        </div>
+      </nav>
+    </div>
     <main>
       <slot />
     </main>
     <footer>
-      <div class="container" set:html={t.footer} />
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href={homeHref} class="footer-logo">
+            <div class="footer-lm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <span>{t.brand}</span>
+          </a>
+          <p>{t.brandTagline}</p>
+        </div>
+        <div class="footer-col">
+          <h4>{t.footerCols.protocol.title}</h4>
+          <ul>
+            {t.footerCols.protocol.links.map(l => (
+              <li><a href={l.h} target={l.h.startsWith('http') ? '_blank' : undefined} rel={l.h.startsWith('http') ? 'noopener' : undefined}>{l.t}</a></li>
+            ))}
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>{t.footerCols.community.title}</h4>
+          <ul>
+            {t.footerCols.community.links.map(l => (
+              <li><a href={l.h} target="_blank" rel="noopener">{l.t}</a></li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div class="footer-btm">
+        <span>{t.footerBtm}</span>
+      </div>
     </footer>
   </body>
 </html>
