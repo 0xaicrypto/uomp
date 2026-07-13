@@ -1,4 +1,4 @@
-<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP 本地开发 shortcut 序列图">
+<svg viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP 本地开发 shortcut 序列图">
   <defs>
     <marker id="shortcut-arrow-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#0A0A0A"/></marker>
     <marker id="shortcut-return-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#0A0A0A"/></marker>

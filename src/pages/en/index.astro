@@ -146,47 +146,7 @@ import { baseUrl } from '../../utils/base.ts';
         <span class="sec-tag">How It Works</span>
       </div>
       <h2>Five steps,<br/><em>one authorization.</em></h2>
-      <div class="diagram">
-        <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP workflow diagram">
-          <defs>
-            <marker id="arrowhead-en" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#0A0A0A" />
-            </marker>
-          </defs>
-          <rect x="260" y="20" width="440" height="220" rx="12" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="2" />
-          <text x="480" y="45" text-anchor="middle" fill="#6B7280" font-size="12" font-family="Inter, system-ui, sans-serif">User Host</text>
-
-          <rect x="20" y="100" width="110" height="60" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
-          <text x="75" y="135" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Agent</text>
-
-          <rect x="300" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
-          <text x="360" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">uomp CLI</text>
-
-          <rect x="560" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
-          <text x="620" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Auth Service</text>
-
-          <rect x="300" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
-          <text x="360" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Guard</text>
-
-          <rect x="560" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2" />
-          <text x="620" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Store</text>
-
-          <line x1="130" y1="115" x2="300" y2="90" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="210" y="95" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">1. uom.json</text>
-
-          <line x1="420" y1="82" x2="560" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="490" y="75" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">2. authorize</text>
-
-          <line x1="620" y1="104" x2="130" y2="145" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="380" y="155" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">3. Capability Token</text>
-
-          <line x1="130" y1="155" x2="300" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="210" y="185" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">4. HTTP + Token</text>
-
-          <line x1="420" y1="192" x2="560" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrowhead-en)" />
-          <text x="490" y="215" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">5. filter by scope</text>
-        </svg>
-      </div>
+      <img src="/diagrams/home-workflow-en.svg" alt="UOMP workflow diagram" class="diagram" />
       <ol>
         <li><strong>Discover an Agent</strong>: Browse an Agent marketplace (e.g., an ERC8004-based registry).</li>
         <li><strong>Review the Manifest</strong>: The Agent declares its identity and requested memory scope in <code>uom.json</code>.</li>

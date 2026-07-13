@@ -49,6 +49,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 100px;
 }
 
 body {
@@ -99,7 +100,7 @@ nav {
   justify-content: space-between;
   padding: 4px 6px 4px 6px;
   gap: 8px;
-  width: min(840px, calc(100vw - 32px));
+  width: min(var(--max-width), calc(100vw - 32px));
   margin: 0 auto;
 }
 

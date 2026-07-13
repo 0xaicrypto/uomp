@@ -1,27 +1,42 @@
-<svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP 架构图">
+<svg viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UOMP 架构图">
   <defs>
-    <marker id="arrow-spec-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0,10 3.5,0 7" fill="#0A0A0A"/>
-    </marker>
+    <marker id="arrow-spec-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#0A0A0A"/></marker>
+    <marker id="return-spec-zh" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#6B7280"/></marker>
   </defs>
-  <rect x="260" y="20" width="440" height="220" rx="12" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="2"/>
-  <text x="480" y="45" text-anchor="middle" fill="#0A0A0A" font-size="12" font-family="Inter, system-ui, sans-serif">用户本机 / User Host</text>
+  <rect x="360" y="20" width="440" height="220" rx="12" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="2"/>
+  <text x="580" y="45" text-anchor="middle" fill="#6B7280" font-size="12" font-family="Inter, system-ui, sans-serif">用户本机 / User Host</text>
+
   <rect x="20" y="100" width="110" height="60" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
-  <text x="75" y="135" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif">Agent</text>
-  <rect x="300" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
-  <text x="360" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif">用户 UI / CLI</text>
-  <rect x="560" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
-  <text x="620" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif">Auth Service</text>
-  <rect x="300" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
-  <text x="360" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif">Memory Guard</text>
-  <rect x="560" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
-  <text x="620" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif">Memory Store</text>
-  <line x1="420" y1="82" x2="560" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
-  <text x="490" y="75" text-anchor="middle" fill="#0A0A0A" font-size="10" font-family="Inter, system-ui, sans-serif">create / grant / revoke</text>
-  <line x1="560" y1="104" x2="300" y2="170" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
-  <text x="470" y="155" text-anchor="middle" fill="#0A0A0A" font-size="10" font-family="Inter, system-ui, sans-serif">Capability Token</text>
-  <line x1="130" y1="130" x2="300" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
-  <text x="210" y="185" text-anchor="middle" fill="#0A0A0A" font-size="10" font-family="Inter, system-ui, sans-serif">HTTP + Authorization</text>
-  <line x1="420" y1="192" x2="560" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
-  <text x="490" y="215" text-anchor="middle" fill="#0A0A0A" font-size="10" font-family="Inter, system-ui, sans-serif">read / write (filtered)</text>
+  <text x="75" y="135" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Agent</text>
+
+  <rect x="190" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="250" y="82" text-anchor="middle" fill="#0A0A0A" font-size="12" font-family="Inter, system-ui, sans-serif" font-weight="600">Auth Service</text>
+  <text x="250" y="96" text-anchor="middle" fill="#6B7280" font-size="9" font-family="Inter, system-ui, sans-serif">local or remote</text>
+
+  <rect x="380" y="60" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="440" y="87" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">用户 UI / CLI</text>
+
+  <rect x="380" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="440" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Guard</text>
+
+  <rect x="640" y="170" width="120" height="44" rx="8" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="700" y="197" text-anchor="middle" fill="#0A0A0A" font-size="13" font-family="Inter, system-ui, sans-serif" font-weight="600">Memory Store</text>
+
+  <line x1="130" y1="120" x2="380" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
+  <text x="245" y="95" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">1. uom.json</text>
+
+  <line x1="380" y1="82" x2="310" y2="82" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
+  <text x="345" y="75" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">2. create / grant</text>
+
+  <line x1="310" y1="104" x2="380" y2="104" stroke="#6B7280" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#return-spec-zh)"/>
+  <text x="345" y="118" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">3. Capability Token</text>
+
+  <line x1="380" y1="170" x2="130" y2="140" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
+  <text x="245" y="165" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">4. deliver Token</text>
+
+  <line x1="130" y1="155" x2="380" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
+  <text x="245" y="185" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">5. HTTP + Authorization</text>
+
+  <line x1="500" y1="192" x2="640" y2="192" stroke="#0A0A0A" stroke-width="2" marker-end="url(#arrow-spec-zh)"/>
+  <text x="570" y="215" text-anchor="middle" fill="#6B7280" font-size="10" font-family="Inter, system-ui, sans-serif">6. read / write (filtered)</text>
 </svg>

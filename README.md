@@ -1,11 +1,19 @@
 # UOMP - User-Owned Memory Protocol
 
-UOMP（User-Owned Memory Protocol）是一种用户主权型授权协议，允许用户将其个人记忆数据临时授权给 AI Agent 访问。授权基于会话生效，按标签或键限定范围，会话结束或撤销后立即失效。
+<p align="center">
+  <a href="https://www.uomp.org/spec/">规范文档</a> •
+  <a href="https://www.uomp.org/roadmap/">路线图</a> •
+  <a href="https://www.uomp.org/en/spec/">English Spec</a> •
+  <a href="https://github.com/0xaicrypto/uomp/discussions">GitHub Discussions</a>
+</p>
 
-- [规范文档](https://www.uomp.org/spec/)
-- [路线图](https://www.uomp.org/roadmap/)
-- [English Spec](https://www.uomp.org/en/spec/)
-- [GitHub Discussions](https://github.com/0xaicrypto/uomp/discussions)
+<p align="center">
+  <a href="https://www.uomp.org/spec/"><img src="https://img.shields.io/badge/spec-Draft--00-6B7280" alt="Spec" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" /></a>
+  <a href="https://github.com/0xaicrypto/uomp/discussions"><img src="https://img.shields.io/github/discussions/0xaicrypto/uomp" alt="Discussions" /></a>
+</p>
+
+UOMP（User-Owned Memory Protocol）是一种用户主权型授权协议，允许用户将其个人记忆数据临时授权给 AI Agent 访问。授权基于会话生效，按标签或键限定范围，会话结束或撤销后立即失效。
 
 ## 状态
 

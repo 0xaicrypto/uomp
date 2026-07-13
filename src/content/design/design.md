@@ -29,14 +29,15 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 
 ## 2. 标准架构流程
 
-在 UOMP 的标准模型中，**Agent 是独立进程**，uomp CLI 是**用户侧的授权代理**，运行在 Memory Store / Guard 所在机器：
+在 UOMP 的标准模型中，**Agent 是独立进程**，uomp CLI 是**用户侧的授权代理**，运行在 Memory Store / Guard 所在机器。Auth Service 可以与 Memory Guard / Store 位于同一机器（本地默认），也可以由用户选择的可信远程服务提供：
 
 <img src="/diagrams/design-standard-zh.svg" alt="UOMP 标准架构序列图" class="diagram" />
 
 关键点：
 
 - **Agent 与 CLI 是独立进程**，Agent 不依赖 CLI 启动。
-- **身份验证、授权面板、Token 签发都发生在 CLI（用户侧，即 Memory 所在机器）。**
+- **身份验证、授权面板、Token 签发发生在 CLI（用户侧）或用户选择的 Auth Service。**
+- **Auth Service 可以本地部署，也可以远程部署**；Token 最终通过 CLI 交付给 Agent。
 - **Agent 只接收 Token 并使用它读取数据**，不参与授权决策。
 
 ### 2.1 本地开发便利模式

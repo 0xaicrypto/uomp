@@ -29,14 +29,15 @@ This document explains how the UOMP **reference implementation** [`uomp-mvp`](ht
 
 ## 2. Standard Architecture Flow
 
-In UOMP's standard model, the **Agent is an independent process**, and the uomp CLI is the **user-side authorization proxy** running on the machine where the Memory Store / Guard lives:
+In UOMP's standard model, the **Agent is an independent process**, and the uomp CLI is the **user-side authorization proxy** running on the machine where the Memory Store / Guard lives. The Auth Service may run on the same machine as the Memory Guard / Store (local default) or may be provided by a trusted remote service chosen by the user:
 
 <img src="/diagrams/design-standard-en.svg" alt="UOMP standard architecture sequence diagram" class="diagram" />
 
 Key points:
 
 - **Agent and CLI are separate processes**; the Agent does not depend on the CLI to start.
-- **Identity verification, authorization prompt, and Token issuance all happen in the CLI (on the user's side, where Memory lives).**
+- **Identity verification, authorization prompt, and Token issuance happen in the CLI (on the user's side) or in the user's chosen Auth Service.**
+- **The Auth Service can be deployed locally or remotely**; the Token is ultimately delivered to the Agent through the CLI.
 - **The Agent only receives the Token and uses it to read data**; it does not participate in authorization decisions.
 
 ### 2.1 Local Development Convenience Mode
