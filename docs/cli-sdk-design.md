@@ -609,14 +609,19 @@ MVP 审计日志存在本地 SQLite。未来需要把审计事件直接记录到
 
 ## 11. 实现阶段
 
-### Phase 1：通用 CLI/SDK + 股票示例（2-3 周）
+### Phase 1：通用 CLI/SDK + 股票示例（已实现）
 
-- CLI 支持 `discover`、`connect`、`authorize`、`sessions`、`revoke`、`audit`、`import`
-- 连接时完成身份验证、checksum 校验、风险评分
-- 授权前字段级数据暴露摘要
-- 本地 Registry 索引
-- Agent Developer SDK（`UompAgent.fromEnv()`、`memory.read`、`output.save`）
-- 股票分析 Agent demo
+参考实现位于 [`uomp-mvp`](https://github.com/0xaicrypto/uomp-core/tree/main/uomp-mvp)，完整可运行流程见 [`examples/stock-analyst/README.md`](https://github.com/0xaicrypto/uomp-core/tree/main/uomp-mvp/examples/stock-analyst/README.md)。
+
+已实现能力：
+
+- CLI 支持 `discover`、`connect`、`authorize`、`sessions`、`revoke`、`audit`、`import`。
+- `authorize` 展示字段级数据暴露摘要；对高敏感 tag 自动收集 item key 完成 key 级授权。
+- Token 交付：终端打印 + `--output <file>`。
+- 本地 Registry 索引（`registry search/list/add/remove`）。
+- Agent Developer SDK（`UompAgent.fromEnv()`、`memory.readTag`、`memory.readKey`、`output.save`）。
+- 股票分析 Agent demo：导入 CSV/JSON → 授权 → 独立运行 → 生成本地 Markdown 报告。
+- 会话与审计查询。
 
 ### Phase 2：体验打磨（2-3 周）
 
@@ -667,7 +672,6 @@ MVP 审计日志存在本地 SQLite。未来需要把审计事件直接记录到
 
 ## 13. 下一步行动
 
-1. 确认通用 CLI 命令集是否完整。
-2. 确认 Agent Developer SDK 的最小 API 集合。
-3. 确认本地 Registry 索引是否需要默认示例。
-4. 进入 Phase 1 实现：先改造 CLI（discover/connect/authorize/import），再搭股票 Agent demo。
+1. Phase 1 已跑通股票分析示例，继续打磨错误提示与字段映射体验。
+2. 推进 Phase 2：`uomp dry-run`、`uomp config`、更完善的 `import` 预览/脱敏、链上 Registry 同步。
+3. 补充更多验收范例（日历、健康、教育类 Agent）以验证通用性。
