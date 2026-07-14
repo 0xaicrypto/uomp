@@ -1,4 +1,4 @@
-# UOMP 股票分析 Agent：CLI / SDK / 数据源设计文档
+# UOMP CLI/SDK 设计文档——以股票分析 Agent 为例
 
 > 目标：以股票分析 Agent 为牵引，把 UOMP 的 CLI 和 SDK 从“能用”打磨成“好懂、可控、可扩展”。
 >

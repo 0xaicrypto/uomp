@@ -7,4 +7,10 @@ export default defineConfig({
   integrations: [mdx()],
   output: 'static',
   trailingSlash: 'always',
+  markdown: {
+    shikiConfig: {
+      theme: 'github-light',
+      wrap: true,
+    },
+  },
 });

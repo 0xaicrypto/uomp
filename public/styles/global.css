@@ -685,6 +685,10 @@ pre code {
   color: var(--ink2);
 }
 
+pre.astro-code {
+  background-color: var(--off2) !important;
+}
+
 /* ── FOOTER ── */
 footer {
   background: var(--ink);
