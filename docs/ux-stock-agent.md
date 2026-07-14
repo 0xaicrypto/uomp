@@ -2,8 +2,10 @@
 
 > 目标：以股票分析 Agent 为牵引，把 UOMP 的 CLI 和 SDK 从“能用”打磨成“好懂、可控、可扩展”。
 > 本设计同时面向两个角色：
-> - **Agent User（投资者 / 终端用户）**：使用 CLI 授权、管理会话、查看审计。
+> - **Agent User（投资者 / 终端用户）**：使用 CLI 发现 Agent、连接、授权、管理会话、查看审计。
 > - **Agent Developer（Agent 开发者）**：使用 SDK 开发股票分析 Agent，调用 Memory Guard 读取用户数据。
+>
+> 关键边界：**Agent User 的 CLI 不负责启动 Agent 进程**。用户只做发现、连接、授权；Agent 由用户自己或独立启动器运行，凭 Token 访问 Memory Guard。
 
 ---
 
@@ -11,8 +13,9 @@
 
 1. **用户敢用**：投资者能清楚知道 Agent 会读什么、读到多细、多久失效。
 2. **开发者好写**：Agent 开发者几行代码就能接入 UOMP，不用理解 JWT、DID、Session 细节。
-3. **场景闭环**：从导入持仓、授权 Agent、获取分析、撤销会话，全程在本地完成。
-4. **可扩展**：数据模型和 SDK 接口要能支持后续更多金融场景（基金、债券、加密资产）。
+3. **用户与 Agent 解耦**：用户不因为“授权”就不得不运行一段外部代码；Agent 可以独立运行、独立分发。
+4. **场景闭环**：从导入持仓、发现 Agent、连接、授权、Agent 独立运行、获取分析、撤销会话，全程可控。
+5. **可扩展**：数据模型和 SDK 接口要能支持后续更多金融场景（基金、债券、加密资产）。
 
 ---
 
@@ -22,13 +25,15 @@
 
 - 不是开发者，不会写代码。
 - 关心三件事：我的数据在哪、Agent 能看什么、怎么让它停下来。
-- 使用 CLI 完成所有操作。
+- 使用 CLI 完成所有操作，但 **CLI 不帮用户启动 Agent**。
+- 用户自己决定在哪里、以什么方式运行 Agent；CLI 只负责签发 Token 并安全交付。
 
 ### 2.2 Agent Developer（Agent 作者）
 
 - 会写 TypeScript/Python，想快速做一个股票分析 Agent。
 - 关心：怎么声明权限、怎么读数据、怎么上报审计、怎么在本地跑通。
 - 使用 SDK + `uom.json`。
+- 需要一个开发者专用的 CLI 命令来本地调试和启动 Agent（例如 `uomp dev run` 或 `uomp agent run`）。
 
 ---
 
@@ -130,8 +135,9 @@ Agent 不依赖本地 Memory Store 获取公开市场数据，可以自行调用
 
 ## 5. CLI 设计：Agent User 视角
 
-CLI 是投资者与 UOMP 交互的唯一入口。设计要点：
+CLI 是投资者的“授权管理器”，不是 Agent 启动器。设计要点：
 
+- **只做发现、连接、授权、会话管理、审计**。
 - 所有危险操作都有确认。
 - 授权前必须展示“数据暴露摘要”。
 - 会话状态一目了然。
@@ -139,21 +145,33 @@ CLI 是投资者与 UOMP 交互的唯一入口。设计要点：
 
 ### 5.1 命令总览
 
-| 命令 | 作用 | 典型用户 |
-|------|------|----------|
-| `uomp run <agent>` | 一键发现、授权、启动 Agent | 普通用户 |
-| `uomp authorize <agent>` | 只授权，输出 Token | 高级用户 / 自定义启动 |
-| `uomp import <file>` | 导入持仓/自选股/风险偏好 | 普通用户 |
-| `uomp data` | 查看本地 Memory Store 中的数据 | 普通用户 |
-| `uomp sessions` | 查看活跃会话 | 普通用户 |
-| `uomp revoke <session-id>` | 撤销会话 | 普通用户 |
-| `uomp audit` | 查看访问审计日志 | 普通用户 |
-| `uomp config` | 配置默认风险偏好、数据源偏好 | 普通用户 |
-| `uomp dry-run <agent>` | 模拟运行，不读真实数据 | 谨慎用户 |
-| `uomp registry search <keyword>` | 从 Registry 搜索 Agent | 普通用户 |
-| `uomp agent init <name>` | 初始化一个 Agent 项目 | Agent 开发者 |
-| `uomp agent validate` | 验证 `uom.json` 和文件结构 | Agent 开发者 |
-| `uomp agent publish` | 打包 Agent 供发布 | Agent 开发者 |
+#### Agent User 命令
+
+| 命令 | 作用 |
+|------|------|
+| `uomp import <file>` | 导入持仓/自选股/风险偏好 |
+| `uomp data` | 查看本地 Memory Store 中的数据 |
+| `uomp discover <path-or-registry>` | 发现 Agent，显示清单信息 |
+| `uomp connect <agent>` | 连接 Agent，验证身份，预览权限请求 |
+| `uomp authorize <agent>` | 创建 Session 并签发 Token |
+| `uomp sessions` | 查看活跃会话 |
+| `uomp revoke <session-id>` | 撤销会话 |
+| `uomp audit` | 查看访问审计日志 |
+| `uomp config` | 配置默认风险偏好、数据源偏好 |
+| `uomp dry-run <agent>` | 模拟授权，不读真实数据 |
+| `uomp registry search <keyword>` | 从 Registry 搜索 Agent |
+
+#### Agent Developer 命令
+
+| 命令 | 作用 |
+|------|------|
+| `uomp agent init <name>` | 初始化一个 Agent 项目 |
+| `uomp agent validate` | 验证 `uom.json` 和文件结构 |
+| `uomp agent test` | 使用测试数据本地调试 Agent |
+| `uomp agent run <agent>` | 开发者本地启动 Agent（用于测试） |
+| `uomp agent publish` | 打包 Agent 供发布 |
+
+> 注意：`uomp agent run` 属于开发者调试工具，不是给普通用户的命令。
 
 ### 5.2 核心流程 wireflow
 
@@ -175,16 +193,73 @@ $ uomp import holdings.csv --tag portfolio:holdings
   存储位置: ~/.uomp/memory/
 ```
 
-#### 5.2.2 运行 Agent（普通用户）
+#### 5.2.2 发现 Agent
 
 ```bash
-$ uomp run ./examples/stock-analyst
+$ uomp discover ./examples/stock-analyst
+```
+
+或从 Registry：
+
+```bash
+$ uomp registry search stock
+$ uomp discover registry://stock-analyst
 ```
 
 输出：
 
 ```text
-发现 Agent: stock-analyst v0.1
+Agent: stock-analyst v0.1
+发布者: example-org  [DID 已验证]
+描述: 基于持仓和市场公开信息生成投资策略分析
+
+外部数据源:
+  - yahoo-finance
+  - alpha-vantage
+
+权限请求:
+  [高敏感] portfolio:holdings   - 当前持仓
+  [中敏感] portfolio:watchlist - 自选股
+  [中敏感] profile:risk        - 风险偏好
+  [低敏感] market:public       - 公开市场数据（Agent 将自行获取）
+
+写入权限: 无
+```
+
+#### 5.2.3 连接 Agent
+
+```bash
+$ uomp connect ./examples/stock-analyst
+```
+
+输出：
+
+```text
+已连接 Agent: stock-analyst v0.1
+身份验证: DID 已验证
+发布者: example-org
+
+本次连接未授权任何数据，Agent 无法访问 Memory Guard。
+请运行 `uomp authorize stock-analyst` 进行授权。
+```
+
+“连接”的含义是：
+
+- CLI 读取并验证 Agent 的 `uom.json`。
+- 确认 Agent 身份（DID / GPG / Registry）。
+- 在本地建立一个“已连接”记录，方便后续授权。
+- **不启动 Agent，也不签发 Token**。
+
+#### 5.2.4 授权 Agent
+
+```bash
+$ uomp authorize ./examples/stock-analyst
+```
+
+输出：
+
+```text
+授权请求: stock-analyst v0.1
 发布者: example-org  [DID 已验证]
 
 权限请求:
@@ -194,7 +269,7 @@ $ uomp run ./examples/stock-analyst
   [低敏感] market:public       - 公开市场数据（Agent 将自行获取）
 
 写入权限: 无
-会话时长: 10 分钟
+默认会话时长: 10 分钟
 
 本次将暴露:
   - 你的 8 条持仓记录（含成本价和市值）
@@ -209,20 +284,20 @@ $ uomp run ./examples/stock-analyst
 ```text
 已创建会话: sess_abc123
 已签发 Capability Token（有效期至 10:30）
-正在启动 Agent...
 
-Agent 日志:
-  10:00:01  读取 portfolio:holdings  (8 条)
-  10:00:02  读取 profile:risk        (1 条)
-  10:00:03  获取市场数据: AAPL, TSLA, NVDA
-  10:00:08  生成分析报告
-  10:00:10  完成
+请把以下环境变量设置到你运行 Agent 的终端或启动器中：
 
-分析报告已保存: ./output/stock-analysis-20260714.md
-会话已自动关闭。
+  export UOM_TOKEN="eyJhbG..."
+  export UOMP_BASE_URL="http://127.0.0.1:9374"
+
+或者保存到文件:
+  uomp authorize ./examples/stock-analyst --output ~/.uomp/tokens/sess_abc123.env
+
+Agent 启动后可以通过 Memory Guard 访问已授权数据。
+你可以随时运行 `uomp revoke sess_abc123` 撤销授权。
 ```
 
-#### 5.2.3 编辑范围
+#### 5.2.5 编辑范围
 
 用户选 `e` 后进入交互：
 
@@ -238,7 +313,7 @@ Agent 日志:
   [x] 仅暴露持仓代码和权重（脱敏模式）
 ```
 
-#### 5.2.4 查看会话
+#### 5.2.6 查看会话
 
 ```bash
 $ uomp sessions
@@ -255,7 +330,7 @@ $ uomp sessions
   sess_ghi789  stock-analyst  10:30 已过期
 ```
 
-#### 5.2.5 撤销会话
+#### 5.2.7 撤销会话
 
 ```bash
 $ uomp revoke sess_abc123
@@ -266,9 +341,10 @@ $ uomp revoke sess_abc123
 ```text
 已撤销会话 sess_abc123。
 对应 Capability Token 已立即失效。
+正在运行的 Agent 将在下一次访问 Memory Guard 时被拒绝。
 ```
 
-#### 5.2.6 审计日志
+#### 5.2.8 审计日志
 
 ```bash
 $ uomp audit --agent stock-analyst --today
@@ -280,7 +356,7 @@ $ uomp audit --agent stock-analyst --today
 2026-07-14 10:00:01  stock-analyst  READ  portfolio:holdings  8 items
 2026-07-14 10:00:02  stock-analyst  READ  profile:risk        1 item
 2026-07-14 10:00:03  stock-analyst  FETCH market:public       AAPL,TSLA,NVDA
-2026-07-14 10:00:10  stock-analyst  WRITE analysis:report     1 item
+2026-07-14 10:00:10  stock-analyst  SAVE  analysis:report     1 item
 ```
 
 ### 5.3 CLI 配置
@@ -298,9 +374,9 @@ $ uomp config set data_source.market.cn tushare
 
 | 场景 | 旧错误 | 新错误 |
 |------|--------|--------|
-| Token 未授权某 tag | `ACCESS_DENIED` | `Agent 请求读取 "portfolio:holdings"，但当前会话未授权。请运行: uomp authorize ./stock-analyst --include portfolio:holdings` |
+| Token 未授权某 tag | `ACCESS_DENIED` | `Agent 请求读取 "portfolio:holdings"，但当前会话未授权。请让用户运行: uomp authorize <agent> --include portfolio:holdings` |
 | Agent 请求写入 | `WRITE_NOT_AVAILABLE` | `当前 Agent 请求写入数据，但 UOMP MVP 禁止 Agent 写入。如需保存报告，请让 Agent 输出到本地文件。` |
-| 会话已过期 | `TOKEN_EXPIRED` | `会话 sess_abc123 已过期（10:30）。请重新运行: uomp run ./stock-analyst` |
+| 会话已过期 | `TOKEN_EXPIRED` | `会话 sess_abc123 已过期（10:30）。请重新运行: uomp authorize <agent>` |
 | 高敏感未确认 | `ACCESS_DENIED` | `"portfolio:holdings" 为高敏感数据，需要用户在授权时显式确认。请使用 --sensitive 参数或交互式授权。` |
 
 ---
@@ -365,6 +441,22 @@ $ uomp agent test
 3. 启动 Agent
 4. 输出审计日志
 
+### 6.4 开发者本地启动 Agent
+
+```bash
+$ uomp agent run ./examples/stock-analyst
+```
+
+开发者测试时使用，等价于：
+
+```bash
+$ uomp authorize ./examples/stock-analyst --output /tmp/uomp.env
+$ source /tmp/uomp.env
+$ node ./examples/stock-analyst/dist/index.js
+```
+
+> 这个命令只对开发者暴露，普通用户不需要也不应该使用。
+
 ---
 
 ## 7. SDK 设计：Agent User 视角
@@ -391,7 +483,13 @@ await client.memory.import({
 // 查看数据
 const holdings = await client.memory.query({ tags: ['portfolio:holdings'] });
 
-// 运行 Agent
+// 发现 Agent
+const manifest = await client.discover('./examples/stock-analyst');
+
+// 连接 Agent（验证身份）
+const connection = await client.connect('./examples/stock-analyst');
+
+// 授权 Agent，返回 Token
 const session = await client.authorize({
   agentPath: './examples/stock-analyst',
   includeSensitive: true,
@@ -513,19 +611,28 @@ const safe = redactHoldings(holdings, { keep: ['symbol', 'weight'] });
 导入持仓 CSV  ---->  数据进入本地 Memory Store (portfolio:holdings, high)
    |
    v
-运行 uomp run ./stock-analyst
+uomp discover ./stock-analyst
    |
    v
-CLI 展示 Agent 声明、请求范围、数据暴露摘要
+uomp connect ./stock-analyst  ---->  验证 Agent 身份，建立连接记录
    |
    v
-用户确认 / 编辑范围 / 脱敏
+uomp authorize ./stock-analyst
    |
    v
-CLI 创建 Session，签发 Token，注入 Agent 进程
+CLI 展示数据暴露摘要，用户确认 / 编辑范围 / 脱敏
    |
    v
-[Agent 进程]
+CLI 创建 Session，签发 Token
+   |
+   v
+CLI 输出环境变量或 Token 文件给用户
+   |
+   v
+[用户在另一个终端 / 启动器中运行 Agent]
+   |
+   v
+Agent 读取 UOM_TOKEN，访问 Memory Guard
    |
    v
 SDK 读取 portfolio:holdings, profile:risk
@@ -549,10 +656,12 @@ Agent 本地生成分析报告
 
 1. **持仓默认高敏感**：`portfolio:holdings` 必须标记为 high，不能 tag 泛化授权。
 2. **公开数据不敏感**：`market:*` 可设为 low，Agent 可自行获取。
-3. **LLM 调用要脱敏**：如果 Agent 调用外部 LLM，必须先去掉成本价、股数等敏感字段。
-4. **报告本地保存**：分析结论默认写到用户本地文件，不写入 Memory Store，除非用户授权 `analysis:report`。
-5. **会话短期**：股票分析通常 5-10 分钟足够，默认 Token 有效期不超过 10 分钟。
-6. **审计完整**：每次 `memory.read`、每次外部 API 调用、每次报告生成都应记录。
+3. **用户 CLI 不启动 Agent**：避免“授权即执行”的安全风险，Agent 必须由用户独立启动。
+4. **Token 交付要安全**：默认输出到终端，由用户手动复制；也支持 `--output` 保存到用户指定文件。不推荐自动注入外部进程。
+5. **LLM 调用要脱敏**：如果 Agent 调用外部 LLM，应先去掉成本价、股数等敏感字段。
+6. **报告本地保存**：分析结论默认写到用户本地文件，不写入 Memory Store，除非用户授权 `analysis:report`。
+7. **会话短期**：股票分析通常 5-10 分钟足够，默认 Token 有效期不超过 10 分钟。
+8. **审计完整**：每次 `memory.read`、每次外部 API 调用、每次报告生成都应记录。
 
 ---
 
@@ -563,15 +672,17 @@ Agent 本地生成分析报告
 - 股票 Agent 能读取 `portfolio:holdings` 和 `profile:risk`
 - Agent 从 Yahoo Finance 获取行情
 - 生成 Markdown 报告保存到本地
-- CLI 的交互式授权和数据暴露摘要
+- CLI 支持 `uomp discover`、`uomp connect`、`uomp authorize` 和数据暴露摘要
+- Token 以环境变量形式交付给用户
 
 ### Phase 2：体验打磨（2-3 周）
 
 - `uomp import` CSV 导入
-- `uomp dry-run` 模拟运行
+- `uomp dry-run` 模拟授权
 - `uomp config` 用户配置
 - SDK 的数据脱敏辅助函数
 - 更友好的错误信息
+- 开发者命令 `uomp agent run` / `uomp agent test`
 
 ### Phase 3：生产准备（后续）
 
@@ -590,16 +701,21 @@ Agent 本地生成分析报告
    - 建议：MVP 禁止；报告保存到本地文件。后续可通过 `analysis:report` tag 授权写入。
 3. **高敏感数据是否支持“脱敏授权”？**
    - 建议：支持。CLI 提供脱敏选项，底层通过 key 级授权实现。
-4. **CLI 是否内置 TUI（如 Ink/blessed）？**
+4. **Token 交付方式偏好？**
+   - 选项 A：终端打印 `export` 命令，用户手动复制。
+   - 选项 B：保存到 `~/.uomp/tokens/<session>.env` 文件，用户 source。
+   - 选项 C：通过本地 socket/IPC 传给 Agent（需要 Agent 监听，增加复杂度）。
+   - 建议 Phase 1 用 A + B，C 后续考虑。
+5. **CLI 是否内置 TUI（如 Ink/blessed）？**
    - 建议：Phase 2 考虑，Phase 1 用简单文本交互即可。
-5. **是否需要为 Agent 开发者提供 Python SDK？**
+6. **是否需要为 Agent 开发者提供 Python SDK？**
    - 建议：先做好 TypeScript SDK，Python SDK 后续跟进（金融圈 Python 开发者很多）。
 
 ---
 
 ## 13. 下一步行动
 
-1. 确认以上数据模型和数据源选择。
-2. 确认 CLI 的交互流程（特别是授权前的“数据暴露摘要”和“编辑范围”）。
+1. 确认“用户 CLI 不启动 Agent”的边界和 Token 交付方式（A / B / C）。
+2. 确认授权前的“数据暴露摘要”和“编辑范围”交互细节。
 3. 确认 SDK 的最小 API 集合。
-4. 之后即可进入 Phase 1 实现。
+4. 之后即可进入 Phase 1 实现：先做一个最小 CLI（discover/connect/authorize）+ 一个股票 Agent demo。
