@@ -478,7 +478,7 @@ $ uomp config set data_source.market.cn tushare
 
 ## 6. Registry 与 Agent 发现设计
 
-Phase 1 先做本地路径发现，同时定义好基于 ERC-8004 的 Registry 接口，方便后续接入。
+Phase 1 实现一个本地 Registry 索引（Local Registry Index），让用户可以通过 `uomp registry search` 发现 Agent，同时定义好基于 ERC-8004 的链上 Registry 接口，方便后续接入。
 
 ### 6.1 Agent 打包格式
 
@@ -563,6 +563,134 @@ CLI:
 | L3 用户信任 | 用户之前授权过同一发布者 | 最高 |
 
 CLI 在连接时应明确显示当前 Agent 达到了哪一层验证。
+
+### 6.5 本地 Registry 索引实现
+
+Phase 1 不直接对接链上合约，而是用一个本地 JSON 文件作为 Registry 索引，让 `uomp registry search` 和 `uomp discover registry://<id>` 能跑起来。
+
+#### 6.5.1 存储位置
+
+```text
+~/.uomp/registry/
+  index.json            # 本地 Registry 索引
+  cache/                # 已下载的 Agent 包缓存
+    stock-analyst/
+      v0.1.0/
+        uom.json
+        dist/
+        README.md
+        signature.json
+```
+
+#### 6.5.2 索引格式
+
+`~/.uomp/registry/index.json`：
+
+```json
+{
+  "version": "1.0",
+  "updated_at": "2026-07-14T10:00:00Z",
+  "agents": [
+    {
+      "id": "stock-analyst",
+      "version": "0.1.0",
+      "name": "持仓分析助手",
+      "description": "基于持仓和市场公开信息生成投资策略分析",
+      "publisher": "example-org",
+      "publisher_did": "did:ethr:0xabc123...",
+      "metadata_uri": "https://github.com/example-org/stock-analyst/releases/v0.1.0/metadata.json",
+      "source_url": "https://github.com/example-org/stock-analyst/releases/v0.1.0/stock-analyst-0.1.0.tar.gz",
+      "package_checksum": "sha256:abc...",
+      "signature": "...",
+      "verified": true,
+      "tags": ["stock", "portfolio", "analysis"],
+      "added_at": "2026-07-14T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### 6.5.3 索引来源
+
+本地索引可以通过以下方式维护：
+
+1. **手动添加**：用户把本地 Agent 路径加入索引。
+2. **开发者添加**：Agent 作者提供索引条目，用户复制到 `~/.uomp/registry/index.json`。
+3. **链上同步**：后续实现 `uomp registry sync`，从 ERC-8004 合约拉取已验证条目。
+4. **社区维护**：提供一个默认的社区索引文件（类似 `registry.json`），用户可以选择订阅。
+
+#### 6.5.4 CLI 命令
+
+| 命令 | 作用 |
+|------|------|
+| `uomp registry search <keyword>` | 按关键词搜索本地索引 |
+| `uomp registry list` | 列出所有已索引 Agent |
+| `uomp registry add <path>` | 把本地 Agent 路径加入索引 |
+| `uomp registry add-url <url>` | 从 URL 下载 Agent 包并加入索引 |
+| `uomp registry remove <id>` | 从索引移除某 Agent |
+| `uomp registry verify <id>` | 校验本地缓存的 Agent 包完整性 |
+| `uomp registry sync` | 后续从链上 Registry 同步验证状态 |
+
+#### 6.5.5 搜索示例
+
+```bash
+$ uomp registry search stock
+```
+
+输出：
+
+```text
+找到 2 个 Agent:
+
+  stock-analyst v0.1.0
+    持仓分析助手
+    发布者: example-org  [已验证]
+    tags: stock, portfolio, analysis
+
+  stock-news v0.2.0
+    股票新闻聚合
+    发布者: another-org  [未验证]
+    tags: stock, news
+
+请运行 `uomp discover registry://<id>` 查看详情。
+```
+
+#### 6.5.6 发现流程（本地 Registry）
+
+```text
+用户: uomp registry search stock
+CLI:
+  1. 读取 ~/.uomp/registry/index.json
+  2. 按关键词过滤返回列表
+  3. 用户选择 stock-analyst
+  4. 用户运行 uomp discover registry://stock-analyst
+  5. CLI 检查本地缓存是否存在
+     - 不存在: 从 source_url 下载并解压到 ~/.uomp/registry/cache/
+     - 存在: 使用缓存
+  6. CLI 校验 package_checksum 和 signature
+  7. CLI 调用 uomp connect 完成身份和完整性验证
+  8. 用户运行 uomp authorize 进行授权
+```
+
+#### 6.5.7 与链上 ERC-8004 的衔接
+
+本地索引中的 `verified` 字段后续可以从 ERC-8004 合约读取：
+
+```text
+uomp registry sync --network mainnet --contract 0x...
+```
+
+同步后：
+
+- 链上 `isVerified(agentId) == true` 的 Agent，本地 `verified` 标记为 true。
+- 链上 `revoke` 的 Agent，本地同步移除或标记为 revoked。
+- 新增条目可以按链上 `register` 事件自动拉取。
+
+#### 6.5.8 安全考虑
+
+1. **默认不信任任何索引条目**：即使 `verified=true`，`uomp connect` 时仍要重新校验签名和 checksum。
+2. **来源可追溯**：每个条目必须包含 `source_url` 和 `publisher_did`，方便用户核查。
+3. **社区索引可审核**：默认社区索引使用公开 GitHub 仓库，变更通过 PR 审核。
 
 ---
 
@@ -874,6 +1002,7 @@ Agent 本地生成分析报告
 - 授权前字段级数据暴露摘要
 - Token 以环境变量形式交付给用户
 - `uomp sessions` 显示最后访问时间和状态
+- 本地 Registry 索引：`uomp registry search/list/add/discover registry://<id>`
 
 ### Phase 2：体验打磨（2-3 周）
 
@@ -883,7 +1012,7 @@ Agent 本地生成分析报告
 - SDK 的数据脱敏辅助函数
 - 更友好的错误信息
 - 开发者命令 `uomp agent run` / `uomp agent test`
-- 接入 Registry 搜索和下载
+- `uomp registry sync` 对接链上 ERC-8004 合约
 
 ### Phase 3：生产准备（后续）
 
@@ -901,7 +1030,7 @@ Agent 本地生成分析报告
 2. **Token 交付方式**
    - Phase 1 用终端打印 + `--output` 保存文件。自动注入外部进程放到后续。
 3. **Registry 实现**
-   - 沿用 ERC-8004 接口，先实现本地缓存索引，后续对接链上合约。
+   - 已确定：Phase 1 实现本地 Registry 索引（`~/.uomp/registry/index.json`），沿用 ERC-8004 接口设计，后续通过 `uomp registry sync` 对接链上合约。
 4. **报告是否允许 Agent 写回 Memory Store？**
    - 建议：MVP 禁止；报告保存到本地文件。后续可通过 `analysis:report` tag 授权写入。
 5. **是否需要为 Agent 开发者提供 Python SDK？**
@@ -913,5 +1042,5 @@ Agent 本地生成分析报告
 
 1. 确认字段级数据暴露摘要的格式（`uom.json` 中的 `fields` 和 `purposes`）。
 2. 确认风险评分的具体规则（高敏感 tag 数量、外部数据源数量、写入权限的权重）。
-3. 确认 Registry 在 Phase 1 的落地范围（只做接口设计，还是同时实现最小本地索引）。
-4. 之后即可进入 Phase 1 实现：先改造 CLI 支持 discover/connect/authorize，再搭股票 Agent demo。
+3. 确认本地 Registry 索引的初始内容：是否提供一个默认的 `registry.json` 示例（包含 stock-analyst）？
+4. 之后即可进入 Phase 1 实现：先改造 CLI 支持 discover/connect/authorize + 本地 Registry 索引，再搭股票 Agent demo。
