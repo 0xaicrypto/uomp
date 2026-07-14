@@ -83,8 +83,8 @@
 
 | 来源 | 数据 | 导入方式 | 说明 |
 |------|------|----------|------|
-| 用户手动输入 | 持仓、自选股、风险偏好 | CLI 交互式问卷 | 最简单，适合 demo |
-| CSV/Excel 导入 | 持仓、交易记录 | `uomp import holdings.csv` | 支持常见券商导出格式 |
+| 用户手动输入 | 持仓、自选股、风险偏好等 | `uomp import --interactive` | 最简单，适合 demo |
+| CSV/Excel/JSON 导入 | 持仓、交易记录、风险配置等 | `uomp import <file> --tag <tag>` | 通用私有数据导入 |
 | 券商 API / 文件同步 | 实时持仓 | 后续扩展，MVP 不做 | 需要合规考虑 |
 
 ### 4.2 Agent 运行时抓取的数据源
@@ -130,7 +130,7 @@ Agent 不依赖本地 Memory Store 获取公开市场数据，可以自行调用
 ### 4.3 数据源使用原则
 
 1. **用户私有数据必须走 Memory Guard**：持仓、风险偏好等只能由 Agent 通过 UOMP Token 读取。
-2. **公开数据 Agent 可自行获取**：但建议在 `uom.json` 中声明会用到的外部数据源，让用户知情。
+2. **公开数据 Agent 可自行获取**：但在 `uom.json` 中声明会用到的外部数据源，让用户知情。
 3. **避免 Agent 把私有数据传给外部 API**：Agent 不能把用户持仓列表作为参数发给第三方 LLM 或数据源。分析逻辑应尽量本地完成。
 4. **LLM 调用默认本地或用户可控**：如果必须调用云端 LLM，应先对持仓做脱敏（如只传代码和权重，不传成本价）。
 
@@ -178,10 +178,42 @@ CLI 是投资者的“授权管理器”，不是 Agent 启动器。设计要点
 
 ### 5.2 核心流程 wireflow
 
-#### 5.2.1 导入持仓
+#### 5.2.1 导入私有 Memory
+
+`uomp import` 是一个通用命令，用来把用户本地数据导入 Memory Store。它不只针对持仓，也适用于自选股、风险偏好、任何用户愿意授权给 Agent 的私有数据。
+
+#### 基本用法
 
 ```bash
-$ uomp import holdings.csv --tag portfolio:holdings
+# 导入持仓 CSV
+$ uomp import holdings.csv --tag portfolio:holdings --sensitivity high
+
+# 导入风险偏好 JSON
+$ uomp import risk-profile.json --tag profile:risk --sensitivity medium
+
+# 导入自选股（手动输入）
+$ uomp import --tag portfolio:watchlist --sensitivity medium --interactive
+
+# 指定 key 字段和格式
+$ uomp import trades.xlsx --tag portfolio:transactions --sensitivity high --format xlsx --key-field id
+```
+
+#### 参数说明
+
+| 参数 | 作用 | 示例 |
+|------|------|------|
+| `--tag` | 指定 Memory tag | `portfolio:holdings` |
+| `--sensitivity` | 指定敏感度 | `high` / `medium` / `low` |
+| `--key-field` | CSV/JSON 中哪一列作为 item key | `symbol`, `id` |
+| `--format` | 文件格式，默认自动推断 | `csv`, `json`, `xlsx` |
+| `--interactive` | 交互式输入，适合手动录入 | - |
+| `--dry-run` | 预览会导入哪些数据，不写入 | - |
+| `--replace` | 替换该 tag 下已有数据，默认追加 | - |
+
+#### 持仓导入示例
+
+```bash
+$ uomp import holdings.csv --tag portfolio:holdings --sensitivity high
 ```
 
 输出：
@@ -194,6 +226,54 @@ $ uomp import holdings.csv --tag portfolio:holdings
   标签: portfolio:holdings
   敏感度: high
   存储位置: ~/.uomp/memory/
+```
+
+#### 风险偏好导入示例
+
+```bash
+$ uomp import risk.json --tag profile:risk --sensitivity medium
+```
+
+输出：
+
+```text
+已导入风险偏好:
+  文件: risk.json
+  记录数: 1
+  标签: profile:risk
+  敏感度: medium
+```
+
+#### 导入流程
+
+```text
+uomp import <file>
+  -> 自动推断或用户指定 format
+  -> 解析数据并映射为 Memory Item 列表
+  -> 用户确认 tag / sensitivity / key-field
+  -> 写入本地 Memory Store
+  -> 返回导入摘要
+```
+
+#### 数据映射
+
+`uomp import` 不要求用户数据严格符合 Memory Item 格式。CLI 会尝试自动映射常见字段，例如：
+
+| 用户数据字段 | 映射到 Memory Item |
+|-------------|-------------------|
+| `symbol`, `股票代码`, `code` | `key` 或 `value.symbol` |
+| `quantity`, `数量` | `value.quantity` |
+| `cost`, `cost_basis`, `成本价` | `value.cost_basis` |
+| `note`, `备注` | `value.notes` |
+
+如果自动映射不满足，用户可以通过 `--map` 参数指定：
+
+```bash
+$ uomp import mydata.csv \
+    --tag portfolio:holdings \
+    --map key=symbol \
+    --map "value.quantity=持仓数量" \
+    --map "value.cost_basis=成本价"
 ```
 
 #### 5.2.2 发现 Agent
@@ -1006,7 +1086,7 @@ Agent 本地生成分析报告
 
 ### Phase 2：体验打磨（2-3 周）
 
-- `uomp import` CSV 导入
+- `uomp import` 通用数据导入优化（字段映射、格式识别、预览）
 - `uomp dry-run` 模拟授权
 - `uomp config` 用户配置
 - SDK 的数据脱敏辅助函数
