@@ -7,7 +7,7 @@
         <div class="window-dot g"></div>
       </div>
     </div>
-    <div class="window-body" id="terminal-demo" style="padding:20px; font-family:monospace; font-size:0.82rem; color:#D1D5DB; text-align:left; min-height:160px; line-height:1.7;">
+    <div class="window-body" id="terminal-demo" style="padding:20px; font-family:monospace; font-size:0.82rem; color:#D1D5DB; text-align:left; min-height:160px; max-height:200px; overflow-y:auto; line-height:1.7;">
     </div>
   </div>
   <div class="stats-bar">
@@ -23,27 +23,46 @@
 (function() {
   const el = document.getElementById('terminal-demo');
   const C = { g: '#9CA3AF', b: '#60A5FA', w: '#F9FAFB', gn: '#34D399', dim: '#6B7280' };
-  const cursor = '<span style="color:#F9FAFB;animation:blink 1s step-end infinite">▌</span>';
+  const cursor = '<span style="animation:blink 1s step-end infinite">▌</span>';
 
   const frames = [
-    { t: 1800, html: `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp import holdings.csv</span><br><span style="color:${C.gn}">✓ 10 items</span>` },
-    { t: 1500, html: `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp authorize stock-analyst</span><br><span style="color:${C.gn}">✓ token</span>` },
-    { t: 1800, html: `<span style="color:${C.g}">$</span> <span style="color:${C.w}">node index.js</span><br><span style="color:${C.g}">P&amp;L: +72% &nbsp;Sharpe: 1.24 &nbsp;Signals: 8</span><br><span style="color:${C.gn}">✓ report.html</span>` },
-    { t: 1500, html: `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp gateway start</span><br><span style="color:${C.dim}">https://xxx.trycloudflare.com</span>` },
+    `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp import holdings.csv</span><br><span style="color:${C.gn}">✓ 10 items</span><br>`,
+    `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp authorize stock-analyst</span><br><span style="color:${C.gn}">✓ token</span><br>`,
+    `<span style="color:${C.g}">$</span> <span style="color:${C.w}">node index.js</span><br><span style="color:${C.g}">P&amp;L: +72% &nbsp;Sharpe: 1.24 &nbsp;Signals: 8</span><br><span style="color:${C.gn}">✓ report.html</span><br>`,
+    `<span style="color:${C.g}">$</span> <span style="color:${C.w}">uomp gateway start</span><br><span style="color:${C.dim}">https://xxx.trycloudflare.com</span><br>`,
   ];
 
-  async function loop() {
-    let i = 0;
-    while (true) {
-      el.innerHTML = frames[i].html + cursor;
-      await new Promise(r => setTimeout(r, frames[i].t));
-      i = (i + 1) % frames.length;
+  let i = 0;
+  let cycle = 0;
+  const maxCycles = 3;
+
+  function scroll() { el.scrollTop = el.scrollHeight; }
+
+  async function next() {
+    el.innerHTML += frames[i];
+    scroll();
+    await new Promise(r => setTimeout(r, 1800));
+    i++;
+    if (i >= frames.length) {
+      i = 0;
+      cycle++;
+      if (cycle >= maxCycles) {
+        await new Promise(r => setTimeout(r, 2000));
+        el.innerHTML = '';
+        cycle = 0;
+        await new Promise(r => setTimeout(r, 400));
+      }
     }
+    next();
   }
-  loop();
+
+  el.innerHTML = `<span style="color:${C.dim}">UOMP v1.0</span><br><br>`;
+  next();
 })();
 </script>
 <style>
   @keyframes blink { 50% { opacity: 0; } }
-  #terminal-demo { overflow: hidden; }
+  #terminal-demo::-webkit-scrollbar { width: 4px; }
+  #terminal-demo::-webkit-scrollbar-track { background: #111; }
+  #terminal-demo::-webkit-scrollbar-thumb { background: #333; }
 </style>
