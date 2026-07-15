@@ -12,7 +12,7 @@ import { baseUrl } from '../utils/base.ts';
       </div>
       <h1>股票分析 Agent</h1>
       <p>
-        通过这个示例，你可以体验 UOMP 的完整用户流程：把持仓 CSV 和风险偏好导入本地 Memory Store，授权一个外部股票分析 Agent 读取必要数据，Agent 结合公开行情生成本地投资分析报告。
+        通过这个示例，你可以体验 UOMP 的完整用户流程：把持仓 CSV 和风险偏好导入本地 Memory Store，授权一个外部股票分析 Agent 读取必要数据，Agent 结合公开行情生成多维投资分析报告（v0.2 新增行业分布、集中度、波动率、Beta、止损止盈信号）。
       </p>
       <p>
         完整代码与数据文件在参考实现的 <a href="https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst" target="_blank" rel="noopener">examples/stock-analyst</a> 目录。
@@ -72,13 +72,15 @@ pnpm cli audit --limit 20</code></pre>
 
       <h2>9. 远程模式：通过 Gateway 访问</h2>
       <p>
-        如果 Agent 运行在另一台机器或容器里，可以用 <code>apps/gateway</code> 把本地 Memory Guard 暴露为 HTTPS + mTLS 入口。此时 Token 的 <code>audience</code> 指向 Gateway，而不是 <code>127.0.0.1:9374</code>。
+        如果 Agent 运行在另一台机器或容器里，可以用 <code>apps/gateway</code> 把本地 Memory Guard 暴露为 HTTPS + mTLS 入口。Agent 会通过 mTLS 连接 Gateway，先做聚合查询，再读取授权数据，最后生成报告、上传 Payload、提交删除证明。
       </p>
-      <p>生成证书并启动 Gateway：</p>
+      <p>一键端到端测试（含本地模式和远程 Gateway 模式）：</p>
+      <pre><code>./scripts/test-stock-analyst.sh</code></pre>
+      <p>或手动执行 Gateway 流程：</p>
       <pre><code>./scripts/generate-gateway-certs.sh
-node apps/gateway/dist/index.js</code></pre>
-      <p>运行端到端烟雾测试（会创建 remote session、签发 remote token、通过 mTLS 查询持仓与审计）：</p>
-      <pre><code>./scripts/test-gateway-remote.sh</code></pre>
+node apps/gateway/dist/index.js
+# 然后在另一个终端用 --output 授权，设置 UOMP_BASE_URL=https://localhost:9443 运行 Agent</code></pre>
+      <p>分析维度：盈亏分析、行业分布（含目标偏差）、集中度 HHI、年化波动率、Beta、止损/止盈信号、回撤告警、组合波动率、中英双语报告。</p>
       <p>完整配置见 <a href="https://github.com/0xaicrypto/uomp-core/tree/main/apps/gateway/README.md" target="_blank" rel="noopener">apps/gateway/README.md</a>。</p>
 
       <div class="hero-btns" style="margin-top: 2.5rem;">
