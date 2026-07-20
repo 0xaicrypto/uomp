@@ -61,8 +61,8 @@
 </div>
 
 <script>
-window._connect=null;window._linkDropbox=null;
-function start(){document.getElementById('landing').style.display='none';document.getElementById('app').style.display='block';document.getElementById('status').innerHTML='';autoStart()}
+window._connect=null;window._linkDropbox=null;window._autoStart=null;
+function start(){document.getElementById('landing').style.display='none';document.getElementById('app').style.display='block';if(window._autoStart)window._autoStart()}
 function connect(c){if(window._connect)window._connect(c);else document.getElementById('walStep').innerHTML='<span class="status status-err">Loading...</span>'}
 function linkDropbox(){if(window._linkDropbox)window._linkDropbox();else document.getElementById('dbStep').innerHTML='<span class="status status-err">Loading...</span>'}
 </script>
