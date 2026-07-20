@@ -151,9 +151,11 @@ window.sendToAgent=async function(){
 
 function updateTopbar(){
   const a=_addr,st=dropbox?'📦 Dropbox':'💻 Browser';
-  document.getElementById('topbar').innerHTML=`<span style="color:var(--mid)">${st}</span><span class="addr">${a.slice(0,12)}...${a.slice(-4)}</span><span class="spacer"></span><span class="status status-ok">Encrypted</span><button class="btn btn-out btn-sm" onclick="disconnectDb()" style="${dropbox?'':'display:none'}">Disconnect DB</button><button class="btn btn-out btn-sm" onclick="location.reload()">Lock</button>`;
+  document.getElementById('topbar').innerHTML=`<span style="color:var(--mid)">${st}</span><span class="addr">${a.slice(0,12)}...${a.slice(-4)}</span><span class="spacer"></span><span class="status status-ok">Encrypted</span>    <button class="btn btn-out btn-sm" onclick="disconnectWallet()">Disconnect Wallet</button>
+    <button class="btn btn-out btn-sm" onclick="disconnectDb()" style="${dropbox?'':'display:none'}">Disconnect Dropbox</button><button class="btn btn-out btn-sm" onclick="location.reload()">Lock</button>`;
 }
-window.disconnectDb=function(){dropbox=null;sessionStorage.removeItem('uomp_db');document.getElementById('dbBtn').style.display='';document.getElementById('dbStep').innerHTML='';updateTopbar();document.getElementById('saveStatus').innerHTML='<span class="status status-ok">Dropbox disconnected — click Connect to reconnect</span>'}
+window.disconnectDb=function(){dropbox=null;sessionStorage.removeItem('uomp_db');document.getElementById('dbBtn').style.display='';document.getElementById('dbStep').innerHTML='';updateTopbar()}
+window.disconnectWallet=function(){cKey=null;uid=null;sessionStorage.removeItem('uomp_wallet');document.getElementById('walBtn').style.display='';document.getElementById('walStep').innerHTML='';updateTopbar();holdings=[];reports=[];render()}
 
 function render(){
   const f=n=>{const v=parseFloat(n);return isNaN(v)?'0':v.toFixed(2)};
