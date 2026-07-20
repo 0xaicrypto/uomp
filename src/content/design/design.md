@@ -16,15 +16,16 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 | 包 / 应用 | Spec 角色 | 职责 |
 |-----------|-----------|------|
 | `packages/core` | — | 共享类型、常量、工具函数 |
-| `packages/store` | Memory Store | SQLite 持久化、tag/key 查询 |
+| `packages/store` | Memory Store | 可插拔存储后端（SQLite / Encrypted Object S3 / IPFS），见 §Store 抽象化 |
 | `packages/token` | — | EdDSA JWT 的签发与校验 |
 | `packages/auth` | Auth Service | Session 创建/授权/关闭/撤销 |
 | `packages/guard` | Memory Guard | Token 校验、Scope 过滤、审计日志 |
-| `packages/identity` | Identity Verification | DID / GPG 验证入口 |
-| `packages/sdk` | Agent SDK（示例级） | 当前为示例 Agent 提供的简单 HTTP 调用封装；面向 GUI 应用集成的完整 TypeScript SDK 见 [路线图](/roadmap/) Milestone 2 |
-| `packages/cli` | User UI | 用户侧 CLI：`discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`；开发者 shortcut `uomp agent run` |
+| `packages/identity` | Identity Verification | 钱包认证（MetaMask / Argent X / Braavos / WalletConnect） + Seed Phrase 备用 |
+| `packages/sdk` | Agent SDK | `UompClient`：memory / aggregate / payload / session / audit / auth / identity；支持 Node.js + 浏览器双构建 |
+| `packages/cli` | User UI | 用户侧 CLI：`discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`/`gateway`/`user`/`store`/`sync` |
 | `apps/server` | — | Auth + Guard 组合 HTTP 服务 |
-| `apps/gateway` | — | 远程授权 Gateway：mTLS 终结、远程 Token 校验、转发 Memory/audit 请求 |
+| `apps/gateway` | — | 用户自托管 Gateway：mTLS 终结、远程 Token 校验、转发 Memory/audit 请求、Cloudflare Tunnel 公网暴露 |
+| `apps/relay` | — | 无状态公共 Relay（设计阶段）：Token 公钥验签、密文转发到 Guard、多 Relay 故障转移 |
 
 ---
 
@@ -262,21 +263,22 @@ WHERE EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)
 
 ---
 
-## 7. SDK
+## 7. SDK（Node.js + 浏览器双构建）
 
-`packages/sdk` 提供 `UompClient` 类，Agent 开发者一行初始化即可使用 UOMP 全部能力：
+`packages/sdk` 提供 `UompClient` 类，**同一套 API 支持 Node.js Agent 和浏览器 App 两种运行环境**。
+
+### Node.js 模式（Agent / CLI）
 
 ```ts
 import { UompClient } from '@uomp/sdk';
 
-const uomp = UompClient.fromEnv(); // 自动读取 UOM_TOKEN + UOMP_BASE_URL
+const uomp = UompClient.fromEnv(); // 读取 UOM_TOKEN + UOMP_BASE_URL
 
-// 子客户端
 await uomp.memory.getByTag('portfolio:holdings');
 await uomp.aggregate.sum('portfolio:holdings', 'value.market_value');
 await uomp.payload.upload(report);
-await uomp.session.submitDeletionProof();
-await uomp.audit.query({ limit: 20 });
+await uomp.session.finalize(); // 提交删除证明 + 关闭 Session
+await uomp.auth.createSession({ agentId, requestedScopes });
 ```
 
 Transport 层自动处理：
@@ -285,7 +287,87 @@ Transport 层自动处理：
 - 重试 + 退避 + 超时控制
 - 结构化错误码（`UompError`）
 
-向后兼容：原 `UserMemory` 类保留可用。完整 API 参考见 [`docs/sdk-design.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/sdk-design.md)。
+### 浏览器模式（Web App）
+
+```ts
+import { BrowserSDK, UompClient } from '@uomp/sdk/browser';
+
+// 钱包签名 → 派生 masterKey → 自动连接
+const uomp = await BrowserSDK.fromWallet();
+
+// 读：S3 直读 + 浏览器内解密（不需要 Gateway 在线）
+const holdings = await uomp.memory.getByTag('portfolio:holdings');
+
+// 写：自动走 Cloud Relay
+await uomp.memory.set('AAPL', newData);
+
+// 离线检测
+if (!uomp.isGatewayOnline) {
+  console.log('只读模式——启动 Gateway 后可写入');
+}
+```
+
+浏览器模式下 SDK 内置 **StoreRouter**：
+- Gateway 在线 → 走 Gateway（有 scope 过滤 + 审计日志）
+- Gateway 不在线 → 降级 S3 直读 + 客户端验签 + 客户端 scope 过滤
+
+### 钱包认证集成
+
+SDK 支持钱包签名派生加密密钥，替代传统 seed phrase：
+
+| 钱包 | 平台 | SDK 调用 |
+|------|------|---------|
+| MetaMask | 浏览器扩展 | `BrowserSDK.fromWallet()` |
+| Argent X | 浏览器扩展 (Starknet) | `BrowserSDK.fromWallet()` |
+| Braavos | 浏览器扩展 (Starknet) | `BrowserSDK.fromWallet()` |
+| Argent Mobile | iOS / Android | WalletConnect → 同上 |
+
+```ts
+// 自动检测可用钱包（MetaMask 优先，其次 Starknet）
+const id = await uomp.identity.fromWallet();
+
+// 指定链
+const id = await uomp.identity.fromWallet('starknet');
+```
+
+## 7.1 Store 抽象化（可插拔存储后端）
+
+Memory Store 从硬编码 SQLite 改为可插拔接口 `IMemoryStore`：
+
+```
+Guard → IMemoryStore ─┬─ SQLiteStore（本地，默认）
+                       ├─ EncryptedObjectStore（S3/R2，多设备）
+                       └─ IPFSStore（去中心化，未来）
+```
+
+- **SQLite**：现有方式，`~/.uomp/memory.db`
+- **Encrypted Object**：每个 Memory Item 独立 AES-256-GCM 加密，存 S3-compatible 存储
+- **IPFS**：内容寻址存储，去中心化
+
+加密在 Guard 进程内完成，云后端只存密文。密钥由钱包签名派生（HKDF）。
+
+## 7.2 Cloud Relay（零安装公共 Gateway）
+
+Cloud Relay 是一个无状态的公共 Gateway，替代用户本地 Gateway 处理写请求和聚合查询：
+
+```
+Browser App ──写请求──► Cloud Relay (relay.uomp.org) ──► Guard ──► Store
+   │                      ↑
+   │                 只过手密文，没有 masterKey
+   │
+   └── 读请求 ──► S3 直读 + 浏览器内解密（不需要 Relay）
+```
+
+| | 用户 Gateway | Cloud Relay |
+|------|------------|------------|
+| 部署 | 用户本地 `uomp gateway start` | 公共云服务（总是在线） |
+| 知道明文 | ✅ | ❌（Store 加密） |
+| 用户负担 | 安装 + 运行 | 零安装 |
+| 适用 | 高敏感数据 | 普通使用、Webapp 开发者 |
+
+Relay 开源，任何人都能部署。UOMP 官方运营一个作为默认值，用户随时切换。
+
+完整设计文档：[`docs/store-abstraction-design.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md)。
 
 ---
 

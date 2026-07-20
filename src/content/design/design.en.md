@@ -16,15 +16,16 @@ This document explains how the UOMP **reference implementation** [`uomp-mvp`](ht
 | Package / App | Spec Role | Responsibility |
 |---------------|-----------|----------------|
 | `packages/core` | — | Shared types, constants, utilities |
-| `packages/store` | Memory Store | SQLite persistence, tag/key queries |
+| `packages/store` | Memory Store | Pluggable storage backends (SQLite / Encrypted Object S3 / IPFS), see §Store Abstraction |
 | `packages/token` | — | EdDSA JWT issuance and verification |
 | `packages/auth` | Auth Service | Session create/grant/close/revoke |
 | `packages/guard` | Memory Guard | Token validation, scope filtering, audit logging |
-| `packages/identity` | Identity Verification | DID / GPG verification entry point |
-| `packages/sdk` | Agent SDK (example-level) | A simple HTTP client wrapper for example Agents; full TypeScript SDK for GUI app integration is planned in [Roadmap](/en/roadmap/) Milestone 2 |
-| `packages/cli` | User UI | User CLI: `discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`; developer shortcut `uomp agent run` |
+| `packages/identity` | Identity Verification | Wallet auth (MetaMask / Argent X / Braavos / WalletConnect) + seed phrase fallback |
+| `packages/sdk` | Agent SDK | `UompClient`: memory / aggregate / payload / session / audit / auth / identity; dual-build for Node.js + browser |
+| `packages/cli` | User UI | User CLI: `discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`/`gateway`/`user`/`store`/`sync` |
 | `apps/server` | — | Combined Auth + Guard HTTP service |
-| `apps/gateway` | — | Remote Authorization Gateway: mTLS termination, remote token validation, forwarding memory/audit requests |
+| `apps/gateway` | — | Self-hosted Gateway: mTLS termination, token validation, memory/audit forwarding, Cloudflare Tunnel |
+| `apps/relay` | — | Stateless public Relay (design phase): token pubkey verification, ciphertext forwarding, multi-relay failover |
 
 ---
 
@@ -262,20 +263,22 @@ Full steps are in the repository at [`examples/stock-analyst/README.md`](https:/
 
 ---
 
-## 7. SDK
+## 7. SDK (Node.js + Browser Dual Build)
 
-`packages/sdk` provides the `UompClient` class — one-line init, full UOMP capability:
+`packages/sdk` provides the `UompClient` class — **same API for both Node.js Agents and browser Web Apps**.
+
+### Node.js Mode (Agent / CLI)
 
 ```ts
 import { UompClient } from '@uomp/sdk';
 
-const uomp = UompClient.fromEnv(); // auto-reads UOM_TOKEN + UOMP_BASE_URL
+const uomp = UompClient.fromEnv(); // reads UOM_TOKEN + UOMP_BASE_URL
 
 await uomp.memory.getByTag('portfolio:holdings');
 await uomp.aggregate.sum('portfolio:holdings', 'value.market_value');
 await uomp.payload.upload(report);
-await uomp.session.submitDeletionProof();
-await uomp.audit.query({ limit: 20 });
+await uomp.session.finalize(); // deletion proof + close
+await uomp.auth.createSession({ agentId, requestedScopes });
 ```
 
 Transport layer handles:
@@ -284,7 +287,87 @@ Transport layer handles:
 - Retry + backoff + timeout
 - Structured errors (`UompError`)
 
-Backward compatible: `UserMemory` class retained. Full API reference: [`docs/sdk-design.en.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/sdk-design.en.md).
+### Browser Mode (Web App)
+
+```ts
+import { BrowserSDK, UompClient } from '@uomp/sdk/browser';
+
+// Wallet signature → derive masterKey → auto-connect
+const uomp = await BrowserSDK.fromWallet();
+
+// Read: S3 direct + in-browser decryption (no Gateway needed)
+const holdings = await uomp.memory.getByTag('portfolio:holdings');
+
+// Write: auto-routed through Cloud Relay
+await uomp.memory.set('AAPL', newData);
+
+// Offline detection
+if (!uomp.isGatewayOnline) {
+  console.log('Read-only mode — start Gateway to enable writes');
+}
+```
+
+Browser SDK includes built-in **StoreRouter**:
+- Gateway online → route through Gateway (scope filtering + audit)
+- Gateway offline → fallback to S3 direct read + client-side verification
+
+### Wallet Auth Integration
+
+SDK derives encryption keys from wallet signatures instead of seed phrases:
+
+| Wallet | Platform | SDK Call |
+|--------|----------|----------|
+| MetaMask | Browser Extension | `BrowserSDK.fromWallet()` |
+| Argent X | Browser Extension (Starknet) | `BrowserSDK.fromWallet()` |
+| Braavos | Browser Extension (Starknet) | `BrowserSDK.fromWallet()` |
+| Argent Mobile | iOS / Android | WalletConnect → same |
+
+```ts
+// Auto-detect available wallet
+const id = await uomp.identity.fromWallet();
+
+// Specify chain
+const id = await uomp.identity.fromWallet('starknet');
+```
+
+## 7.1 Store Abstraction (Pluggable Backends)
+
+Memory Store is abstracted behind the `IMemoryStore` interface:
+
+```
+Guard → IMemoryStore ─┬─ SQLiteStore (local, default)
+                       ├─ EncryptedObjectStore (S3/R2, multi-device)
+                       └─ IPFSStore (decentralized, future)
+```
+
+- **SQLite**: current approach, `~/.uomp/memory.db`
+- **Encrypted Object**: each Memory Item independently AES-256-GCM encrypted, stored on S3-compatible storage
+- **IPFS**: content-addressed, decentralized
+
+Encryption occurs inside the Guard process; cloud backends store only ciphertext. Keys are derived from wallet signatures via HKDF.
+
+## 7.2 Cloud Relay (Zero-Install Public Gateway)
+
+Cloud Relay is a stateless public Gateway that handles write requests and aggregation queries, replacing the need for a local Gateway:
+
+```
+Browser App ──write──► Cloud Relay (relay.uomp.org) ──► Guard ──► Store
+   │                      ↑
+   │              Only sees ciphertext (no masterKey)
+   │
+   └── read ──► S3 direct + in-browser decrypt (no Relay needed)
+```
+
+| | User Gateway | Cloud Relay |
+|------|------------|------------|
+| Deployment | Local `uomp gateway start` | Public cloud (always online) |
+| Sees plaintext | ✅ | ❌ (store encrypted) |
+| User burden | Install + run | Zero install |
+| Use case | High-sensitivity data | General use, Webapp developers |
+
+Relay is open-source — anyone can deploy. UOMP runs a default instance; users can switch at any time.
+
+Full design doc: [`docs/store-abstraction-design.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md).
 
 ---
 
