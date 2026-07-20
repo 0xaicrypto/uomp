@@ -148,7 +148,7 @@ async function decryptData(cryptoKey, encData) {
 // ═══════════════════════════════════════════════════════════════
 const DB_APP_KEY = 'k6k81wrvc90ke45'; // Replace with your Dropbox App Key
 const DB_REDIRECT = window.location.origin + window.location.pathname;
-const DB_AUTH_URL = `https://www.dropbox.com/oauth2/authorize?client_id=${DB_APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(DB_REDIRECT)}&token_access_type=offline`;
+const DB_AUTH_URL = `https://www.dropbox.com/oauth2/authorize?client_id=${DB_APP_KEY}&response_type=token&redirect_uri=${encodeURIComponent(DB_REDIRECT)}`;
 const DB_API = 'https://api.dropboxapi.com/2';
 const DB_CONTENT = 'https://content.dropboxapi.com/2';
 const DB_PREFIX = '/Apps/UOMP';
