@@ -93,7 +93,7 @@ async function connectDb(){
     document.getElementById('dbBtn').style.display='none';
     updateTopbar();
     if(cKey){await loadData();step3()}
-  }catch(e){if(e.message==='Redirecting to Dropbox')return;s.innerHTML=`<span class="status status-err">${e.message}</span>`}
+  }catch(e){if(e.message==='Redirecting to Dropbox')return;s.innerHTML=`<span class="status status-err">${e.message}</span>`;document.getElementById('dbBtn').style.display=''}
 }
 
 function autoStart(){
@@ -149,7 +149,7 @@ function updateTopbar(){
   const a=_addr,st=dropbox?'📦 Dropbox':'💻 Browser';
   document.getElementById('topbar').innerHTML=`<span style="color:var(--mid)">${st}</span><span class="addr">${a.slice(0,12)}...${a.slice(-4)}</span><span class="spacer"></span><span class="status status-ok">Encrypted</span><button class="btn btn-out btn-sm" onclick="disconnectDb()" style="${dropbox?'':'display:none'}">Disconnect DB</button><button class="btn btn-out btn-sm" onclick="location.reload()">Lock</button>`;
 }
-window.disconnectDb=function(){dropbox=null;if(typeof sessionStorage!=='undefined')sessionStorage.removeItem('uomp_db');updateTopbar();document.getElementById('saveStatus').innerHTML='<span class="status status-ok">Dropbox disconnected</span>'}
+window.disconnectDb=function(){dropbox=null;sessionStorage.removeItem('uomp_db');document.getElementById('dbBtn').style.display='';document.getElementById('dbStep').innerHTML='';updateTopbar();document.getElementById('saveStatus').innerHTML='<span class="status status-ok">Dropbox disconnected — click Connect to reconnect</span>'}
 
 function render(){
   const f=n=>{const v=parseFloat(n);return isNaN(v)?'0':v.toFixed(2)};
