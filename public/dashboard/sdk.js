@@ -1,5 +1,5 @@
 /**
- * UOMP Browser SDK v2026-07-20.5 — PBKDF2 key derivation
+ * UOMP Browser SDK v2026-07-20.6 — fix loadEncrypted error handling
  * Self-contained bundle for browser use.
  * No Node.js dependencies. Uses Web Crypto API + window.fetch.
  */
@@ -93,9 +93,14 @@ const BrowserSDK={
   async loadEncrypted(key,userId){
     const raw=localStorage.getItem(STORE_PREFIX+userId);
     if(!raw)return null;
-    const d=JSON.parse(raw);
-    const p=await decryptData(key,d);
-    return JSON.parse(p);
+    try{
+      const d=JSON.parse(raw);
+      const p=await decryptData(key,d);
+      return JSON.parse(p);
+    }catch(e){
+      localStorage.removeItem(STORE_PREFIX+userId);
+      return null;
+    }
   }
 };
 
