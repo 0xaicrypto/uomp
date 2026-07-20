@@ -1,273 +1,92 @@
 ---
 title: 'UOMP Implementation Design'
-description: 'Architecture and implementation notes for the uomp-mvp reference implementation: component responsibilities, data flow, and auth details'
+description: 'Architecture and implementation notes for the uomp-mvp reference implementation: components, deployment modes, SDK, remote access, store abstraction'
 ---
 
 # UOMP Implementation Design
 
-This document explains how the UOMP **reference implementation** [`uomp-mvp`](https://github.com/0xaicrypto/uomp-core) turns the [protocol specification](/en/spec/) into runnable code. It is intended for people who want to understand or extend the implementation.
+This document explains how the UOMP **reference implementation** [`uomp-mvp`](https://github.com/0xaicrypto/uomp-core) turns the [protocol specification](/en/spec/) into runnable code.
 
 ---
 
 ## 1. Implementation Overview
 
-`uomp-mvp` is a TypeScript monorepo. Each package maps to a role in the Spec:
+`uomp-mvp` is a TypeScript monorepo. Each package maps to a Spec role:
 
-| Package / App | Spec Role | Responsibility |
-|---------------|-----------|----------------|
-| `packages/core` | — | Shared types, constants, utilities |
-| `packages/store` | Memory Store | Pluggable storage backends (SQLite / Encrypted Object S3 / IPFS), see §Store Abstraction |
+| Package / App | Role | Responsibility |
+|---------------|------|----------------|
+| `packages/core` | Shared | Types, constants, utilities |
+| `packages/store` | Memory Store | Pluggable storage backends (SQLite / Encrypted Object S3 / IPFS) |
 | `packages/token` | — | EdDSA JWT issuance and verification |
 | `packages/auth` | Auth Service | Session create/grant/close/revoke |
 | `packages/guard` | Memory Guard | Token validation, scope filtering, audit logging |
-| `packages/identity` | Identity Verification | Wallet auth (MetaMask / Argent X / Braavos / WalletConnect) + seed phrase fallback |
-| `packages/sdk` | Agent SDK | `UompClient`: memory / aggregate / payload / session / audit / auth / identity; dual-build for Node.js + browser |
-| `packages/cli` | User UI | User CLI: `discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`/`gateway`/`user`/`store`/`sync` |
-| `apps/server` | — | Combined Auth + Guard HTTP service |
-| `apps/gateway` | — | Self-hosted Gateway: mTLS termination, token validation, memory/audit forwarding, Cloudflare Tunnel |
-| `apps/relay` | — | Stateless public Relay (design phase): token pubkey verification, ciphertext forwarding, multi-relay failover |
+| `packages/identity` | Identity Verification | Wallet auth (MetaMask / Argent X / Braavos) + seed phrase |
+| `packages/sdk` | Agent SDK | `UompClient`, dual-build for Node.js + browser |
+| `packages/cli` | User UI | User CLI: data import, authorization, session/store/gateway management |
+| `apps/server` | — | Combined Auth + Guard HTTP service (`127.0.0.1:9374`) |
+| `apps/gateway` | — | Self-hosted Gateway: mTLS + token forwarding + Cloudflare Tunnel |
+| `apps/relay` | Cloud Relay | Stateless public Relay (design phase): pubkey verification + ciphertext forwarding |
 
 ---
 
-## 2. Standard Architecture Flow
+## 2. Architecture & Deployment Modes
 
-In UOMP's standard model, the **Agent is an independent process**, and the uomp CLI is the **user-side authorization proxy** running on the machine where the Memory Store / Guard lives. The Auth Service may run on the same machine as the Memory Guard / Store (local default) or may be provided by a trusted remote service chosen by the user:
+UOMP supports three deployment modes, ordered by user burden (low to high):
 
-<img src="/diagrams/design-standard-en.svg" alt="UOMP standard architecture sequence diagram" class="diagram" />
+### 2.1 Local Mode (Agent + Guard on same machine)
 
-Key points:
+Default, zero-config. Agent connects directly to Memory Guard at `http://127.0.0.1:9374`.
 
-- **Agent and CLI are separate processes**; the Agent does not depend on the CLI to start.
-- **Identity verification, authorization prompt, and Token issuance happen in the CLI (on the user's side) or in the user's chosen Auth Service.**
-- **The Auth Service can be deployed locally or remotely**; the Token is ultimately delivered to the Agent through the CLI.
-- **The Agent only receives the Token and uses it to read data**; it does not participate in authorization decisions.
-
-### 2.1 Local Development Convenience Mode
-
-The MVP's `pnpm cli agent run ./examples/calendar-agent` is a shortcut to lower the barrier to entry:
-
-<img src="/diagrams/design-shortcut-en.svg" alt="UOMP local development shortcut sequence diagram" class="diagram" />
-
-This mode merges the "authorization proxy" and "Agent launcher" roles and is only suitable for local development and testing, not production architecture. In the standard user flow, the CLI only runs `authorize` and prints the Token; the Agent is started independently by the user.
-
-### 2.2 Remote Mode (Remote Profile + Gateway)
-
-When the Agent runs outside the user's local machine/container/cloud service, use `apps/gateway` to expose the Memory Guard:
-
-- The Gateway listens on HTTPS and requires a client mTLS certificate.
-- The user configures the Gateway endpoint and client-certificate fingerprint allowlist in `~/.uomp/remote-profile.json`.
-- The Capability Token issued by the Auth Service uses `profile: 'remote'` and its `audience` points to the Gateway endpoint (e.g. `https://localhost:9443`).
-- After validating the Token, the Gateway forwards `/v1/memory/*` and `/v1/audit/*` to the local Memory Guard.
-
-```text
-┌─────────────┐   mTLS + Bearer Token   ┌──────────────┐   local HTTP   ┌──────────────┐
-│ Remote Agent│ ───────────────────────►│ UOMP Gateway │ ──────────────►│ Memory Guard │
-└─────────────┘                         └──────────────┘                └──────────────┘
 ```
-
-Quick validation commands:
+┌──────────┐   HTTP   ┌──────────────┐   ┌──────────────┐
+│  Agent   │ ───────► │ Memory Guard │──►│ Memory Store │
+└──────────┘          └──────────────┘   └──────────────┘
+```
 
 ```bash
-# 1. Generate CA / Gateway server cert / client cert
-./scripts/generate-gateway-certs.sh
-
-# 2. Start the Gateway
-node apps/gateway/dist/index.js
-
-# 3. Create a remote session and run the end-to-end smoke test
-./scripts/test-gateway-remote.sh
+pnpm --filter @uomp/server start
+pnpm cli authorize ./my-agent --no-server
+source /tmp/uomp.env && node index.js
 ```
 
-Key code entry points:
+> `pnpm cli agent run ./my-agent` bundles auth + guard + agent launch — dev shortcut only.
 
-- `packages/cli/src/commands/authorize.ts`: standard authorization flow
-- `packages/cli/src/commands/run.ts`: local development shortcut orchestration
-- `packages/cli/src/utils/manifest.ts`: `loadManifest()` and `normalizeManifest()`
-- `packages/auth/src/index.ts`: `AuthService` (`grantSession()` now supports `profile`/`audience`/`allowedFields`/`aggregationOnly`/`taskBound`)
-- `packages/guard/src/index.ts`: `MemoryGuard` (new `/v1/audit` query endpoint)
-- `packages/token/src/index.ts`: `JWTTokenIssuer`
-- `apps/gateway/src/index.ts`: Gateway mTLS server and forwarding logic
-- `scripts/generate-gateway-certs.sh` and `scripts/test-gateway-remote.sh`
+### 2.2 Remote Mode (Agent external, via Gateway)
 
-### 2.3 CLI Command Structure
+Agent runs on cloud (Digital Ocean / VPS / container), connects back through Gateway.
 
-To clearly separate the "end user" and "Agent developer" paths, CLI commands are split into two groups:
+```
+┌──────────────┐   mTLS + Token   ┌──────────────┐   HTTP   ┌──────────────┐
+│ Remote Agent │ ────────────────► │   Gateway    │ ───────► │ Memory Guard │
+└──────────────┘                  └──────────────┘          └──────────────┘
+```
 
-**End-user commands**
+One command with Cloudflare Tunnel (no public IP needed):
 
-| Command | Purpose |
-|---------|---------|
-| `uomp import <file>` | Import private data from CSV/JSON into the Memory Store |
-| `uomp discover <agent>` | Discover an Agent and display its `uom.json` manifest |
-| `uomp connect <agent>` | Verify identity, checksum, and cache the manifest |
-| `uomp authorize <agent>` | Interactively or scriptably authorize and output `UOM_TOKEN` |
-| `uomp sessions` | List active sessions |
-| `uomp revoke <session-id>` | Revoke a session |
-| `uomp audit` | View access audit logs |
-| `uomp registry <sub>` | Manage the local Registry index |
+```bash
+uomp gateway start
+# ═══ Public Gateway URL ═══
+#   https://xxx.trycloudflare.com
+```
 
-**Developer commands**
+### 2.3 Browser Mode (wallet auth + S3 direct + Cloud Relay)
 
-| Command | Purpose |
-|---------|---------|
-| `uomp agent run <agent>` | Local debug shortcut: authorize, start Guard, and launch the Agent in one command |
+Web Apps use `@uomp/sdk/browser`. **Reads require zero server dependencies** (S3 direct + in-browser decryption). Writes go through Cloud Relay.
+
+```
+Browser App ──read──► S3 (ciphertext) ──► in-browser decrypt
+            ──write─► Cloud Relay ──► Guard ──► Store
+```
+
+No local install required. SDK auto-detects Gateway availability; falls back to S3 direct read when offline.
 
 ---
 
-## 3. Authentication & Authorization Implementation
+## 3. SDK
 
-### 3.1 Agent Declaration
+`packages/sdk` provides the `UompClient` class — **same API for Node.js Agents and browser Web Apps**.
 
-`uom.json` uses `snake_case` for `requested_scopes`, while the internal `AgentManifest` type uses `camelCase`. The CLI converts between them in `packages/cli/src/utils/manifest.ts` via `loadManifest()` / `normalizeManifest()`:
-
-```ts
-// packages/cli/src/utils/manifest.ts
-const raw = JSON.parse(content);
-return normalizeManifest(raw);
-```
-
-### 3.2 Session Creation & Granting
-
-`AuthService.createSession()` writes the request into the SQLite `sessions` table with status `created`.
-
-`AuthService.grantSession()`:
-
-1. Checks the Session status is `created`
-2. Constructs the `CapabilityTokenPayload`
-3. Calls `JWTTokenIssuer.issue()` to generate the JWT
-4. Computes a token hash and stores it in `sessions.token_hash`
-5. Updates the Session status to `active`
-
-```ts
-const payload: CapabilityTokenPayload = {
-  version: '1.0',
-  sessionId,
-  agentId: row.agent_id,
-  issuedAt: new Date().toISOString(),
-  expiresAt: expiresAt.toISOString(),
-  scopes: grantedScopes,
-  profile: 'local',
-  audience: 'http://127.0.0.1:9374',
-  limits: { maxReadQueries: 100, maxWriteQueries: 0 },
-};
-```
-
-For remote mode, `grantSession()` accepts optional `{ profile, audience }` parameters; in that case `profile` is `'remote'` and `audience` points to the Gateway endpoint (e.g. `https://localhost:9443`). The Token is still signed by the local Auth Service private key; the Gateway only holds the public key for verification.
-
-### 3.3 JWT Implementation Details
-
-`JWTTokenIssuer` uses the `jose` library:
-
-- Algorithm: `EdDSA` (curve `Ed25519`)
-- Keys generated via `generateKeyPair('EdDSA', { crv: 'Ed25519' })`
-- Internal payload is camelCase; JWT claims are snake_case
-- Standard JWT `iat` and `exp` claims are also set
-- Header includes `kid: 'uomp-auth-key-1'`
-
-```ts
-private payloadToJWT(payload) {
-  return {
-    version: payload.version,
-    session_id: payload.sessionId,
-    agent_id: payload.agentId,
-    issued_at: payload.issuedAt,
-    expires_at: payload.expiresAt,
-    scopes: payload.scopes,
-    limits: payload.limits,
-    profile: payload.profile,
-    audience: payload.audience,
-  allowed_endpoints: payload.allowedEndpoints,
-  allowed_fields: payload.allowedFields,
-  aggregation_only: payload.aggregationOnly ?? false,
-  task_bound: payload.taskBound ?? false,
-};
-}
-```
-
-### 3.4 Guard Enforcement
-
-`MemoryGuard.validateRequest()` validates in order:
-
-1. `Authorization` header is `Bearer <token>`
-2. JWT signature is valid
-3. Token is not expired
-4. Session is not revoked (via `token_blacklist` table)
-
-Then it dispatches by request type:
-
-- `GET /v1/memory/:key` → `isKeyAllowed()`
-- `GET /v1/memory?tag=xxx` → `isTagAllowed()`, then `isKeyAllowed()` for each result
-
-`isKeyAllowed()` decision order:
-
-1. If key is in `denyKeys` → deny
-2. If key is in `keys` → allow
-3. If item `sensitivity === 'high'` → must match `keys`, else deny
-4. If any item tag is in `tags` and not in `denyTags` → allow
-5. Otherwise deny
-
-Therefore, high-sensitivity data (e.g., `portfolio:holdings`) **cannot be authorized by tag alone**. During interactive or scripted authorization, `uomp authorize` automatically adds the keys of all items under the selected high-sensitivity tag to `scope.keys`. This satisfies Guard's requirement while still presenting the user with a tag-level summary in the authorization panel.
-
-### 3.5 Identity Verification (Optional)
-
-Identity verification is performed by the **CLI on the user's machine**, not inside the Agent process. `IdentityVerifier` current implementation:
-
-- **DID**: uses `did-resolver`, `ethr-did-resolver`, and `web-did-resolver`. In MVP it only checks that the DID document is resolvable; signature binding is not enforced.
-- **GPG**: `openpgp` is imported, but `verifyGpg()` is currently a placeholder that only checks whether `proof.proofValue` exists.
-- **No identity**: returns `valid=false`; the CLI on the user's machine prints a yellow warning but still allows execution.
-
-This lowers the barrier for example Agents; production deployments should enforce identity verification on the user's host, and Agents that fail verification must not receive a Token.
-
----
-
-## 4. Memory Store Implementation
-
-`MemoryStore` is based on `better-sqlite3`:
-
-- `memory_items` stores key, value (JSON string), tags (JSON array string), sensitivity, source, etc.
-- `getByTag()` uses the SQLite JSON1 extension:
-
-```sql
-SELECT * FROM memory_items
-WHERE EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)
-```
-
-- `set()` uses `INSERT ... ON CONFLICT(key) DO UPDATE` for upsert
-
----
-
-## 5. Audit Logging
-
-`MemoryGuard` writes to `audit_logs` after every request:
-
-- Both successful and failed requests are logged
-- Includes `session_id`, `agent_id`, `action`, `key`, `tags`, `allowed`, `reason`
-- MVP does not enforce read quotas, but the `limits` field is already reserved for future quota deduction
-
----
-
-## 6. Stock Analyst Example
-
-`examples/stock-analyst/` is the Phase 1 end-to-end acceptance example, covering the full flow from data import to audit and revocation:
-
-1. `uomp import ./examples/stock-analyst/sample-risk.json` imports the risk profile (self-describing JSON record).
-2. `uomp import ./examples/stock-analyst/sample-holdings.csv --tag portfolio:holdings --sensitivity high` imports the holdings CSV.
-3. `uomp discover ./examples/stock-analyst` and `uomp connect ./examples/stock-analyst` verify the Agent.
-4. `uomp authorize ./examples/stock-analyst` authorizes interactively, showing a field-level summary.
-5. The user passes the printed `UOM_TOKEN` to the Agent process and runs `node ./examples/stock-analyst/index.js` independently.
-6. The Agent reads authorized data, fetches public market quotes, and generates a local Markdown report.
-7. `uomp sessions -a` and `uomp audit --limit 20` review access records.
-8. `uomp revoke <session-id>` revokes the session.
-
-Full steps are in the repository at [`examples/stock-analyst/README.md`](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst/README.md).
-
----
-
-## 7. SDK (Node.js + Browser Dual Build)
-
-`packages/sdk` provides the `UompClient` class — **same API for both Node.js Agents and browser Web Apps**.
-
-### Node.js Mode (Agent / CLI)
+### 3.1 Node.js Mode
 
 ```ts
 import { UompClient } from '@uomp/sdk';
@@ -279,130 +98,191 @@ await uomp.aggregate.sum('portfolio:holdings', 'value.market_value');
 await uomp.payload.upload(report);
 await uomp.session.finalize(); // deletion proof + close
 await uomp.auth.createSession({ agentId, requestedScopes });
+
+console.log(uomp.tokenInfo.scopes);
+console.log(uomp.tokenInfo.expiresAt);
 ```
 
-Transport layer handles:
-- `http://` → direct to Memory Guard
-- `https://` → Gateway mTLS (auto-loads `~/.uomp/.gateway-certs/`)
-- Retry + backoff + timeout
-- Structured errors (`UompError`)
+Transport handles: `http://` → direct, `https://` → mTLS auto-load, retry + backoff + timeout, `UompError`.
 
-### Browser Mode (Web App)
+### 3.2 Browser Mode
 
 ```ts
-import { BrowserSDK, UompClient } from '@uomp/sdk/browser';
+import { BrowserSDK } from '@uomp/sdk/browser';
 
-// Wallet signature → derive masterKey → auto-connect
 const uomp = await BrowserSDK.fromWallet();
 
-// Read: S3 direct + in-browser decryption (no Gateway needed)
+// Read: auto-fallback (Gateway online → Gateway; offline → S3 direct + decrypt)
 const holdings = await uomp.memory.getByTag('portfolio:holdings');
 
-// Write: auto-routed through Cloud Relay
+// Write: Cloud Relay
 await uomp.memory.set('AAPL', newData);
 
-// Offline detection
-if (!uomp.isGatewayOnline) {
-  console.log('Read-only mode — start Gateway to enable writes');
-}
+if (!uomp.isGatewayOnline) { /* read-only mode */ }
 ```
 
-Browser SDK includes built-in **StoreRouter**:
-- Gateway online → route through Gateway (scope filtering + audit)
-- Gateway offline → fallback to S3 direct read + client-side verification
+Built-in **StoreRouter**: Gateway online routes through Gateway; offline falls back to S3 direct with client-side verification.
 
-### Wallet Auth Integration
+### 3.3 Wallet Authentication
 
-SDK derives encryption keys from wallet signatures instead of seed phrases:
+Sdk derives encryption keys from wallet signatures:
 
 | Wallet | Platform | SDK Call |
 |--------|----------|----------|
-| MetaMask | Browser Extension | `BrowserSDK.fromWallet()` |
-| Argent X | Browser Extension (Starknet) | `BrowserSDK.fromWallet()` |
-| Braavos | Browser Extension (Starknet) | `BrowserSDK.fromWallet()` |
-| Argent Mobile | iOS / Android | WalletConnect → same |
+| MetaMask | Browser | `BrowserSDK.fromWallet()` |
+| Argent X | Browser (Starknet) | `BrowserSDK.fromWallet()` |
+| Braavos | Browser (Starknet) | `BrowserSDK.fromWallet()` |
+| Argent Mobile | iOS/Android | WalletConnect |
 
 ```ts
-// Auto-detect available wallet
-const id = await uomp.identity.fromWallet();
-
-// Specify chain
 const id = await uomp.identity.fromWallet('starknet');
+// → Argent X popup → sign → HKDF derives masterKey
+// → Same wallet + same message → same key → same data on any device
 ```
 
-## 7.1 Store Abstraction (Pluggable Backends)
+Seed phrase (12-word BIP-39) retained as fallback for non-wallet scenarios.
+
+### 3.4 Sub-client Quick Reference
+
+| Sub-client | Key Methods |
+|------------|-------------|
+| `uomp.memory` | `get(key)`, `getByTag(tag)`, `getByKeys(keys)`, `listTags()`, `has(key)` |
+| `uomp.aggregate` | `sum(tag, field)`, `avg()`, `count()`, `min()`, `max()` |
+| `uomp.payload` | `upload(data)`, `download(id)`, `info(id)` |
+| `uomp.session` | `submitDeletionProof()`, `finalize()`, `close()`, `trackAccess(key)` |
+| `uomp.audit` | `query({ sessionId, limit })`, `getLastAccess()` |
+| `uomp.auth` | `createSession()`, `grant()`, `revoke()`, `validate()` |
+| `uomp.identity` | `fromWallet(chain)`, `fromSeedPhrase(phrase)` |
+
+---
+
+## 4. Remote Access
+
+### 4.1 User Gateway
+
+`apps/gateway` is the user's self-hosted Memory Guard entry point:
+
+```bash
+uomp gateway start               # Gateway + Cloudflare Tunnel
+uomp gateway start --no-tunnel   # Gateway only
+uomp gateway start --browser     # CORS enabled for browser apps
+```
+
+Responsibilities: mTLS termination, token validation (audience + signature + expiry), memory/audit forwarding, payload cache.
+
+### 4.2 Cloud Relay
+
+Cloud Relay is a stateless public version of Gateway. UOMP runs a default instance (`relay.uomp.org`); open-source code allows anyone to self-host.
+
+| | User Gateway | Cloud Relay |
+|------|------------|------------|
+| Deployed | User local | Public cloud (always online) |
+| Sees plaintext | ✅ | ❌ (encrypted in Guard before storage) |
+| User burden | Install + run | Zero install |
+| Use case | High-sensitivity data | General use, Webapp developers |
+
+Relay stores no data and reads no plaintext — it only validates tokens and forwards ciphertext.
+
+### 4.3 Store Abstraction
 
 Memory Store is abstracted behind the `IMemoryStore` interface:
 
 ```
 Guard → IMemoryStore ─┬─ SQLiteStore (local, default)
                        ├─ EncryptedObjectStore (S3/R2, multi-device)
-                       └─ IPFSStore (decentralized, future)
+                       └─ IPFSStore (decentralized)
 ```
 
-- **SQLite**: current approach, `~/.uomp/memory.db`
-- **Encrypted Object**: each Memory Item independently AES-256-GCM encrypted, stored on S3-compatible storage
-- **IPFS**: content-addressed, decentralized
+- **SQLite**: `~/.uomp/memory.db`, default, zero-config
+- **Encrypted Object**: each Memory Item independently AES-256-GCM encrypted, stored on S3-compatible object storage. Multi-device via shared encrypted data
+- **IPFS**: content-addressed, decentralized (future)
 
-Encryption occurs inside the Guard process; cloud backends store only ciphertext. Keys are derived from wallet signatures via HKDF.
-
-## 7.2 Cloud Relay (Zero-Install Public Gateway)
-
-Cloud Relay is a stateless public Gateway that handles write requests and aggregation queries, replacing the need for a local Gateway:
-
-```
-Browser App ──write──► Cloud Relay (relay.uomp.org) ──► Guard ──► Store
-   │                      ↑
-   │              Only sees ciphertext (no masterKey)
-   │
-   └── read ──► S3 direct + in-browser decrypt (no Relay needed)
-```
-
-| | User Gateway | Cloud Relay |
-|------|------------|------------|
-| Deployment | Local `uomp gateway start` | Public cloud (always online) |
-| Sees plaintext | ✅ | ❌ (store encrypted) |
-| User burden | Install + run | Zero install |
-| Use case | High-sensitivity data | General use, Webapp developers |
-
-Relay is open-source — anyone can deploy. UOMP runs a default instance; users can switch at any time.
+Encryption occurs inside the Guard process; cloud backends store only ciphertext. Keys derived from wallet signatures via HKDF.
 
 Full design doc: [`docs/store-abstraction-design.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md).
 
 ---
 
-## 8. Local Configuration Files
+## 5. Auth & Authorization
 
-After `uomp init`, the following are generated in `~/.uomp`:
+### 5.1 Agent Manifest (uom.json)
 
-- `config.json` — service port, data directory
-- `uomp.sqlite` — Memory Store
-- `auth.sqlite` — Sessions and blacklist
-- `audit.sqlite` — Audit logs
-- `.secrets/` — Ed25519 key pair (MVP regenerates on each run; production should persist)
+Agents declare `requested_scopes`, `data_retention_policy`, `external_data_sources` in `uom.json`. The CLI parses these in `packages/cli/src/utils/manifest.ts`.
 
----
+### 5.2 Session Lifecycle
 
-## 9. MVP Limitations & Future Extensions
+```
+[created] ──grant──► [active] ──close/timeout/revoke/deletion-proof──► [closed/expired/revoked]
+```
 
-| Capability | MVP Status | Notes |
-|------------|------------|-------|
-| Agent read | ✅ Implemented | Authorized by tag/key |
-| Agent write | ❌ Not open | Guard returns `503 WRITE_NOT_AVAILABLE` |
-| Agent delete | ❌ Not open | Same as write |
-| Remote Profile (Gateway + mTLS) | ✅ Implemented | Reference implementation in `apps/gateway`; Payload E2E encryption still future work |
-| Aggregation query (`/v1/memory/aggregate`) | ✅ Implemented | sum/avg/count/min/max, paired with `aggregation_only` Token |
-| Deletion proof (`/v1/sessions/{id}/deletion-proof`) | ✅ Implemented | Agent submits signed proof, Session auto-closes |
-| Audit query (`/v1/audit`) | ✅ Implemented | Filterable by session_id |
-| Field filtering (`allowed_fields`) | ✅ Implemented | Token specifies return fields, Guard filters |
-| Identity verification | ⚠️ Optional | DID/GPG framework present, but verification is weak |
-| Query quotas | ⚠️ Reserved | `limits` written into token, but not enforced |
+`AuthService.grantSession()` issues Capability Tokens with optional `allowedFields`, `aggregationOnly`, `taskBound` constraints.
+
+### 5.3 JWT Implementation
+
+- Algorithm: `EdDSA` (curve `Ed25519`), using `jose`
+- Internal payload camelCase, JWT claims snake_case
+- Claims: `session_id`, `agent_id`, `scopes`, `limits`, `profile`, `audience`, `allowed_fields`, `aggregation_only`, `task_bound`
+
+### 5.4 Guard Enforcement
+
+`MemoryGuard.validateRequest()` checks in order: signature → expiry → denylist → scope → sensitivity. `aggregation_only` tokens are rejected on non-aggregation paths. High-sensitivity items require explicit key authorization.
 
 ---
 
-## 10. Related Links
+## 6. Stock Analyst Example
+
+`examples/stock-analyst/` is the full acceptance example:
+
+1. `uomp import` holdings CSV + risk profile
+2. `uomp discover` / `uomp connect` verify the Agent
+3. `uomp authorize` issues the Token
+4. Agent reads data → fetches quotes → analyzes (P&L, Sharpe, Beta, RSI, scenarios)
+5. Generates bilingual reports (JSON + Markdown + HTML)
+6. `uomp sessions` / `uomp audit` for auditing
+7. `uomp revoke` to revoke
+
+Full steps: [`examples/stock-analyst/README.md`](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst/README.md).
+
+---
+
+## 7. Local Config Files
+
+```
+~/.uomp/
+├── config.json           # Service port, store backend config
+├── user.json             # User identity (wallet address, masterKey hash)
+├── memory.db             # Memory Store (SQLite)
+├── auth.db               # Sessions and denylist
+├── audit.db              # Audit logs
+├── remote-profile.json   # Gateway config (endpoint, allowlist)
+├── .secrets/             # Ed25519 keypair
+└── .gateway-certs/       # Gateway mTLS certs (CA + server + client)
+```
+
+---
+
+## 8. MVP Limitations & Future Extensions
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| Agent read | ✅ | Authorized by tag/key/field |
+| Agent write | ❌ | Guard returns `503 WRITE_NOT_AVAILABLE` |
+| Remote Gateway | ✅ | mTLS + Cloudflare Tunnel + browser CORS |
+| Aggregation | ✅ | sum/avg/count/min/max, paired with `aggregation_only` |
+| Deletion proof | ✅ | Agent submits signed proof, session auto-closes |
+| Field filtering | ✅ | Token specifies `allowed_fields`, Guard filters |
+| Browser SDK | ✅ | Wallet auth + S3 direct read + Cloud Relay write |
+| Store abstraction | ⚠️ Designed | SQLite / S3 / IPFS pluggable, Phase 2 implementation pending |
+| Cloud Relay | ⚠️ Designed | Public Gateway implementation, Phase 3.5 pending |
+| Wallet auth | ⚠️ Designed | MetaMask / Argent X / Braavos, Phase 2 implementation pending |
+| Identity verification | ⚠️ | DID/GPG framework present, verification to be strengthened |
+
+---
+
+## 9. Related Links
 
 - [Protocol Specification](/en/spec/)
-- [Reference Implementation Repository](https://github.com/0xaicrypto/uomp-core)
-- [Calendar Example Agent](https://github.com/0xaicrypto/uomp-core/tree/main/examples/calendar-agent)
-- [Stock Analyst Example Agent](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst)
+- [Reference Implementation](https://github.com/0xaicrypto/uomp-core)
+- [SDK Design Document](https://github.com/0xaicrypto/uomp-core/tree/main/docs/sdk-design.en.md)
+- [Store Abstraction Design](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md)
+- [Stock Analyst Example](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst)

@@ -1,11 +1,11 @@
 ---
 title: 'UOMP 实现设计'
-description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责、数据流与认证授权落地细节'
+description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责、部署模式、SDK、远程访问、存储抽象'
 ---
 
 # UOMP 实现设计
 
-本文档说明 UOMP 的**参考实现** [`uomp-mvp`](https://github.com/0xaicrypto/uomp-core) 如何将[协议规范](/spec/)落地为可运行的代码。它面向希望理解或扩展实现的人。
+本文档说明 UOMP 的**参考实现** [`uomp-mvp`](https://github.com/0xaicrypto/uomp-core) 如何将[协议规范](/spec/)落地为可运行的代码。
 
 ---
 
@@ -13,261 +13,84 @@ description: 'UOMP 参考实现 uomp-mvp 的架构与实现说明：组件职责
 
 `uomp-mvp` 是一个 TypeScript monorepo，核心组件与 Spec 中的角色一一对应：
 
-| 包 / 应用 | Spec 角色 | 职责 |
-|-----------|-----------|------|
-| `packages/core` | — | 共享类型、常量、工具函数 |
-| `packages/store` | Memory Store | 可插拔存储后端（SQLite / Encrypted Object S3 / IPFS），见 §Store 抽象化 |
+| 包 / 应用 | 角色 | 职责 |
+|-----------|------|------|
+| `packages/core` | 共享层 | 类型、常量、工具函数 |
+| `packages/store` | Memory Store | 可插拔存储后端（SQLite / Encrypted Object S3 / IPFS） |
 | `packages/token` | — | EdDSA JWT 的签发与校验 |
 | `packages/auth` | Auth Service | Session 创建/授权/关闭/撤销 |
 | `packages/guard` | Memory Guard | Token 校验、Scope 过滤、审计日志 |
-| `packages/identity` | Identity Verification | 钱包认证（MetaMask / Argent X / Braavos / WalletConnect） + Seed Phrase 备用 |
-| `packages/sdk` | Agent SDK | `UompClient`：memory / aggregate / payload / session / audit / auth / identity；支持 Node.js + 浏览器双构建 |
-| `packages/cli` | User UI | 用户侧 CLI：`discover`/`connect`/`authorize`/`import`/`sessions`/`revoke`/`audit`/`registry`/`gateway`/`user`/`store`/`sync` |
-| `apps/server` | — | Auth + Guard 组合 HTTP 服务 |
-| `apps/gateway` | — | 用户自托管 Gateway：mTLS 终结、远程 Token 校验、转发 Memory/audit 请求、Cloudflare Tunnel 公网暴露 |
-| `apps/relay` | — | 无状态公共 Relay（设计阶段）：Token 公钥验签、密文转发到 Guard、多 Relay 故障转移 |
+| `packages/identity` | Identity Verification | 钱包认证（MetaMask / Argent X / Braavos）+ Seed Phrase |
+| `packages/sdk` | Agent SDK | `UompClient`，支持 Node.js + 浏览器双构建 |
+| `packages/cli` | User UI | 用户侧 CLI：数据导入、授权、会话管理、Gateway/Store 管理 |
+| `apps/server` | — | Auth + Guard 组合 HTTP 服务（`127.0.0.1:9374`） |
+| `apps/gateway` | — | 用户自托管 Gateway：mTLS + Token 转发 + Cloudflare Tunnel |
+| `apps/relay` | Cloud Relay | 无状态公共 Relay（设计阶段）：公钥验签 + 密文转发 |
 
 ---
 
-## 2. 标准架构流程
+## 2. 架构与部署模式
 
-在 UOMP 的标准模型中，**Agent 是独立进程**，uomp CLI 是**用户侧的授权代理**，运行在 Memory Store / Guard 所在机器。Auth Service 可以与 Memory Guard / Store 位于同一机器（本地默认），也可以由用户选择的可信远程服务提供：
+UOMP 支持三种部署模式，按用户负担从低到高排列：
 
-<img src="/diagrams/design-standard-zh.svg" alt="UOMP 标准架构序列图" class="diagram" />
+### 2.1 本地模式（Agent 与 Guard 在同一台机器）
 
-关键点：
+默认、零配置。Agent 直接通过 `http://127.0.0.1:9374` 访问 Memory Guard。
 
-- **Agent 与 CLI 是独立进程**，Agent 不依赖 CLI 启动。
-- **身份验证、授权面板、Token 签发发生在 CLI（用户侧）或用户选择的 Auth Service。**
-- **Auth Service 可以本地部署，也可以远程部署**；Token 最终通过 CLI 交付给 Agent。
-- **Agent 只接收 Token 并使用它读取数据**，不参与授权决策。
-
-### 2.1 本地开发便利模式
-
-MVP 中的 `pnpm cli agent run ./examples/calendar-agent` 是为了降低上手门槛提供的快捷方式：
-
-<img src="/diagrams/design-shortcut-zh.svg" alt="UOMP 本地开发 shortcut 序列图" class="diagram" />
-
-这种模式把「授权代理」和「Agent 启动器」合并了，仅适用于本机开发测试，不是生产架构。标准用户流程中，CLI 只负责 `authorize` 并输出 Token，Agent 由用户独立启动。
-
-### 2.2 远程模式（Remote Profile + Gateway）
-
-当 Agent 运行在用户本地之外的机器/容器/云服务时，使用 `apps/gateway` 暴露 Memory Guard：
-
-- Gateway 监听 HTTPS，要求客户端提供 mTLS 证书。
-- 用户在 `~/.uomp/remote-profile.json` 中配置 Gateway endpoint 与客户端证书指纹 allowlist。
-- Auth Service 签发的 Capability Token 使用 `profile: 'remote'`，`audience` 指向 Gateway endpoint（例如 `https://localhost:9443`）。
-- Gateway 校验 Token 后，将 `/v1/memory/*` 和 `/v1/audit/*` 转发给本地 Memory Guard。
-
-```text
-┌─────────────┐   mTLS + Bearer Token   ┌──────────────┐   local HTTP   ┌──────────────┐
-│ Remote Agent│ ───────────────────────►│ UOMP Gateway │ ──────────────►│ Memory Guard │
-└─────────────┘                         └──────────────┘                └──────────────┘
+```
+┌──────────┐   HTTP   ┌──────────────┐   ┌──────────────┐
+│  Agent   │ ───────► │ Memory Guard │──►│ Memory Store │
+└──────────┘          └──────────────┘   └──────────────┘
 ```
 
-快速验证命令：
+启动方式：
 
 ```bash
-# 1. 生成 CA / Gateway 服务端证书 / 客户端证书
-./scripts/generate-gateway-certs.sh
-
-# 2. 启动 Gateway
-node apps/gateway/dist/index.js
-
-# 3. 创建 remote session 并走通 end-to-end
-./scripts/test-gateway-remote.sh
+pnpm --filter @uomp/server start          # 启动 Auth + Guard
+pnpm cli authorize ./my-agent --no-server # 签发 Token
+source /tmp/uomp.env && node index.js     # 运行 Agent
 ```
 
-对应代码入口：
+> `pnpm cli agent run ./my-agent` 是本地调试 shortcut，把授权 + 启动打包了，仅用于开发测试。
 
-- `packages/cli/src/commands/authorize.ts`：标准授权流程
-- `packages/cli/src/commands/run.ts`：本地开发 shortcut 的编排
-- `packages/cli/src/utils/manifest.ts`：`loadManifest()` 与 `normalizeManifest()`
-- `packages/auth/src/index.ts`：`AuthService`（`grantSession()` 已支持 `profile`/`audience`/`allowedFields`/`aggregationOnly`/`taskBound`）
-- `packages/guard/src/index.ts`：`MemoryGuard`（新增 `/v1/audit`）
-- `packages/token/src/index.ts`：`JWTTokenIssuer`
-- `apps/gateway/src/index.ts`：Gateway mTLS 服务器与转发逻辑
-- `scripts/generate-gateway-certs.sh` 与 `scripts/test-gateway-remote.sh`
+### 2.2 远程模式（Agent 在外部，通过 Gateway 访问）
 
-### 2.3 CLI 命令结构
+Agent 运行在云服务（Digital Ocean / VPS / 容器），通过 Gateway 回连用户本地的 Memory Guard。
 
-为清晰区分「普通用户」和「Agent 开发者」两套使用路径，CLI 命令分成两组：
+```
+┌──────────────┐   mTLS + Token   ┌──────────────┐   HTTP   ┌──────────────┐
+│ Remote Agent │ ────────────────► │   Gateway    │ ───────► │ Memory Guard │
+└──────────────┘                  └──────────────┘          └──────────────┘
+```
 
-**普通用户命令**
+Gateway 提供公网入口。无公网 IP 时使用 Cloudflare Tunnel：
 
-| 命令 | 作用 |
-|------|------|
-| `uomp import <file>` | 从 CSV/JSON 导入私有数据到 Memory Store |
-| `uomp discover <agent>` | 发现 Agent，展示 `uom.json` 声明 |
-| `uomp connect <agent>` | 验证 Agent 身份、校验 checksum、缓存 manifest |
-| `uomp authorize <agent>` | 交互式/脚本化授权，输出 `UOM_TOKEN` |
-| `uomp sessions` | 查看活跃会话 |
-| `uomp revoke <session-id>` | 撤销会话 |
-| `uomp audit` | 查看访问审计日志 |
-| `uomp registry <sub>` | 本地 Registry 索引的增删查 |
+```bash
+uomp gateway start
+# ═══ Public Gateway URL ═══
+#   https://xxx.trycloudflare.com
+```
 
-**开发者命令**
+一条命令：Gateway + mTLS 证书 + 公网 Tunnel 全自动。
 
-| 命令 | 作用 |
-|------|------|
-| `uomp agent run <agent>` | 本地调试 shortcut：授权、启动 Guard、启动 Agent 一次完成 |
+### 2.3 浏览器模式（钱包签名 + S3 直读 + Cloud Relay）
+
+Web App 使用 `@uomp/sdk/browser`。**读操作零服务端依赖**（S3 直读 + 浏览器内解密），写操作走 Cloud Relay。
+
+```
+Browser App ──读──► S3 (密文) ──► 浏览器内解密
+            ──写──► Cloud Relay ──► Guard ──► Store
+```
+
+用户不需要安装任何本地组件。SDK 自动检测 Gateway 是否在线，不在线降级为 S3 直读。
 
 ---
 
-## 3. 认证与授权实现
+## 3. SDK
 
-### 3.1 Agent 声明
+`packages/sdk` 提供 `UompClient` 类，**同一套 API 支持 Node.js Agent 和浏览器 Web App**。
 
-`uom.json` 中的 `requested_scopes` 使用 snake_case，但内部 `AgentManifest` 类型使用 camelCase。CLI 在 `packages/cli/src/utils/manifest.ts` 的 `loadManifest()` / `normalizeManifest()` 中完成转换：
-
-```ts
-// packages/cli/src/utils/manifest.ts
-const raw = JSON.parse(content);
-return normalizeManifest(raw);
-```
-
-### 3.2 会话创建与授权
-
-`AuthService.createSession()` 将请求写入 SQLite `sessions` 表，状态为 `created`。
-
-`AuthService.grantSession()`：
-
-1. 检查 Session 状态为 `created`
-2. 构造 `CapabilityTokenPayload`
-3. 调用 `JWTTokenIssuer.issue()` 生成 JWT
-4. 计算 token hash 并存入 `sessions.token_hash`
-5. 更新 Session 状态为 `active`
-
-```ts
-const payload: CapabilityTokenPayload = {
-  version: '1.0',
-  sessionId,
-  agentId: row.agent_id,
-  issuedAt: new Date().toISOString(),
-  expiresAt: expiresAt.toISOString(),
-  scopes: grantedScopes,
-  profile: 'local',
-  audience: 'http://127.0.0.1:9374',
-  limits: { maxReadQueries: 100, maxWriteQueries: 0 },
-};
-```
-
-对于远程模式，`grantSession()` 接受可选的 `{ profile, audience }` 参数；此时 `profile` 为 `'remote'`，`audience` 指向 Gateway endpoint（如 `https://localhost:9443`）。Token 的签名仍由本地 Auth Service 私钥完成，Gateway 仅持有公钥进行校验。
-
-### 3.3 JWT 实现细节
-
-`JWTTokenIssuer` 使用 `jose` 库：
-
-- 算法：`EdDSA`（曲线 `Ed25519`）
-- 私钥/公钥通过 `generateKeyPair('EdDSA', { crv: 'Ed25519' })` 生成
-- 内部 payload 为 camelCase，JWT claims 为 snake_case
-- 同时设置标准 JWT `iat` 和 `exp` claim
-- Header 包含 `kid: 'uomp-auth-key-1'`
-
-```ts
-private payloadToJWT(payload) {
-  return {
-    version: payload.version,
-    session_id: payload.sessionId,
-    agent_id: payload.agentId,
-    issued_at: payload.issuedAt,
-    expires_at: payload.expiresAt,
-    scopes: payload.scopes,
-    limits: payload.limits,
-    profile: payload.profile,
-    audience: payload.audience,
-  allowed_endpoints: payload.allowedEndpoints,
-  allowed_fields: payload.allowedFields,
-  aggregation_only: payload.aggregationOnly ?? false,
-  task_bound: payload.taskBound ?? false,
-};
-}
-```
-
-### 3.4 Guard 鉴权
-
-`MemoryGuard.validateRequest()` 按顺序校验：
-
-1. `Authorization` 头格式为 `Bearer <token>`
-2. JWT 签名有效
-3. Token 未过期
-4. Session 未被吊销（通过 `token_blacklist` 表）
-
-然后按请求类型分别调用：
-
-- `GET /v1/memory/:key` → `isKeyAllowed()`
-- `GET /v1/memory?tag=xxx` → `isTagAllowed()`，再对每个结果调用 `isKeyAllowed()`
-
-`isKeyAllowed()` 的判定顺序：
-
-1. 如果 key 在 `denyKeys` 中 → 拒绝
-2. 如果 key 在 `keys` 中 → 允许
-3. 如果 item 的 `sensitivity === 'high'` → 必须命中 `keys`，否则拒绝
-4. 如果 item 的任意 tag 在 `tags` 中且不在 `denyTags` 中 → 允许
-5. 否则拒绝
-
-因此，高敏感数据（如 `portfolio:holdings`）**不能仅靠 tag 授权**。`uomp authorize` 在交互式或脚本式授权时，会自动把已选中高敏感 tag 下的所有 item key 加入 `scope.keys`，既满足 Guard 要求，又让用户在授权面板中只看到 tag 级别的摘要。
-
-### 3.5 身份验证（可选）
-
-身份验证由 **CLI 在用户本机** 执行，不在 Agent 进程内执行。`IdentityVerifier` 当前实现：
-
-- **DID**：使用 `did-resolver` + `ethr-did-resolver` + `web-did-resolver`。MVP 仅验证 DID 文档可解析，不强求签名绑定。
-- **GPG**：已引入 `openpgp`，但 `verifyGpg()` 目前是 placeholder，仅检查 `proof.proofValue` 是否存在。
-- **无 identity**：返回 `valid=false`，CLI 在用户本机打印黄色警告，但仍可继续运行。
-
-这是为了降低示例 Agent 的上手门槛；生产环境应在用户主机上强制身份验证，未通过验证的 Agent 不应获得 Token。
-
----
-
-## 4. Memory Store 实现
-
-`MemoryStore` 基于 `better-sqlite3`：
-
-- `memory_items` 表存储 key、value（JSON 字符串）、tags（JSON 数组字符串）、sensitivity、source 等
-- `getByTag()` 使用 SQLite JSON1 扩展：
-
-```sql
-SELECT * FROM memory_items
-WHERE EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)
-```
-
-- `set()` 使用 `INSERT ... ON CONFLICT(key) DO UPDATE` 实现 upsert
-
----
-
-## 5. 审计日志
-
-`MemoryGuard` 在每次请求后写入 `audit_logs`：
-
-- 请求成功或失败都会记录
-- 包含 `session_id`、`agent_id`、`action`、`key`、`tags`、`allowed`、`reason`
-- MVP 不限制读取次数，但 `limits` 字段已预留，未来可在此实现配额扣除
-
----
-
-## 6. 股票分析示例
-
-`examples/stock-analyst/` 是 Phase 1 的完整验收示例，覆盖从数据导入到审计撤销的全链路：
-
-1. `uomp import ./examples/stock-analyst/sample-risk.json` 导入风险偏好（JSON 自描述记录）。
-2. `uomp import ./examples/stock-analyst/sample-holdings.csv --tag portfolio:holdings --sensitivity high` 导入持仓 CSV。
-3. `uomp discover ./examples/stock-analyst` 与 `uomp connect ./examples/stock-analyst` 验证 Agent。
-4. `uomp authorize ./examples/stock-analyst` 交互式授权，CLI 展示字段级摘要。
-5. 用户把输出的 `UOM_TOKEN` 交给 Agent 进程，独立运行 `node ./examples/stock-analyst/index.js`。
-6. Agent 读取授权数据、拉取公开行情、生成本地 Markdown 报告。
-7. `uomp sessions -a` 与 `uomp audit --limit 20` 查看访问记录。
-8. `uomp revoke <session-id>` 撤销会话。
-
-完整步骤见仓库内 [`examples/stock-analyst/README.md`](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst/README.md)。
-
----
-
-## 7. SDK（Node.js + 浏览器双构建）
-
-`packages/sdk` 提供 `UompClient` 类，**同一套 API 支持 Node.js Agent 和浏览器 App 两种运行环境**。
-
-### Node.js 模式（Agent / CLI）
+### 3.1 Node.js 模式
 
 ```ts
 import { UompClient } from '@uomp/sdk';
@@ -279,130 +102,206 @@ await uomp.aggregate.sum('portfolio:holdings', 'value.market_value');
 await uomp.payload.upload(report);
 await uomp.session.finalize(); // 提交删除证明 + 关闭 Session
 await uomp.auth.createSession({ agentId, requestedScopes });
+
+// 从 JWT 自动解析
+console.log(uomp.tokenInfo.scopes);   // 授权范围
+console.log(uomp.tokenInfo.expiresAt); // 过期时间
 ```
 
 Transport 层自动处理：
 - `http://` → 直连 Memory Guard
 - `https://` → Gateway mTLS（自动加载 `~/.uomp/.gateway-certs/`）
-- 重试 + 退避 + 超时控制
-- 结构化错误码（`UompError`）
+- 重试 + 退避 + 超时
+- 结构化错误码（`UompError`，区分可重试 / 不可重试）
 
-### 浏览器模式（Web App）
+### 3.2 浏览器模式
 
 ```ts
-import { BrowserSDK, UompClient } from '@uomp/sdk/browser';
+import { BrowserSDK } from '@uomp/sdk/browser';
 
-// 钱包签名 → 派生 masterKey → 自动连接
+// 钱包签名 → 派生加密密钥 → 自动连接
 const uomp = await BrowserSDK.fromWallet();
 
-// 读：S3 直读 + 浏览器内解密（不需要 Gateway 在线）
+// 读：自动降级（Gateway 在线走 Gateway，不在线走 S3 直读 + 浏览器解密）
 const holdings = await uomp.memory.getByTag('portfolio:holdings');
 
-// 写：自动走 Cloud Relay
+// 写：走 Cloud Relay
 await uomp.memory.set('AAPL', newData);
 
 // 离线检测
 if (!uomp.isGatewayOnline) {
-  console.log('只读模式——启动 Gateway 后可写入');
+  // 只读模式——显示 banner 提示用户启动 Gateway
 }
 ```
 
 浏览器模式下 SDK 内置 **StoreRouter**：
-- Gateway 在线 → 走 Gateway（有 scope 过滤 + 审计日志）
-- Gateway 不在线 → 降级 S3 直读 + 客户端验签 + 客户端 scope 过滤
 
-### 钱包认证集成
+```
+uomp.memory.getByTag('holdings')
+  ├── Gateway 在线 → 走 Gateway（有 scope 过滤 + 审计）
+  └── 不在线 → S3 直读 + 客户端验签 + 客户端 scope 过滤
+```
 
-SDK 支持钱包签名派生加密密钥，替代传统 seed phrase：
+### 3.3 钱包认证
+
+SDK 支持通过钱包签名派生加密密钥：
 
 | 钱包 | 平台 | SDK 调用 |
 |------|------|---------|
-| MetaMask | 浏览器扩展 | `BrowserSDK.fromWallet()` |
-| Argent X | 浏览器扩展 (Starknet) | `BrowserSDK.fromWallet()` |
-| Braavos | 浏览器扩展 (Starknet) | `BrowserSDK.fromWallet()` |
-| Argent Mobile | iOS / Android | WalletConnect → 同上 |
+| MetaMask | 浏览器 | `BrowserSDK.fromWallet()` |
+| Argent X | 浏览器 (Starknet) | `BrowserSDK.fromWallet()` |
+| Braavos | 浏览器 (Starknet) | `BrowserSDK.fromWallet()` |
+| Argent Mobile | iOS/Android | WalletConnect |
 
 ```ts
-// 自动检测可用钱包（MetaMask 优先，其次 Starknet）
-const id = await uomp.identity.fromWallet();
-
-// 指定链
 const id = await uomp.identity.fromWallet('starknet');
+// → Argent X 弹窗 → 签名 → HKDF 派生 masterKey
+// → 多设备：同一钱包签同一消息 → 相同 key → 相同数据
 ```
 
-## 7.1 Store 抽象化（可插拔存储后端）
+无钱包场景保留 12 词 seed phrase 备用。
+
+### 3.4 子客户端速查
+
+| 子客户端 | 主要方法 |
+|----------|---------|
+| `uomp.memory` | `get(key)`, `getByTag(tag)`, `getByKeys(keys)`, `listTags()`, `has(key)` |
+| `uomp.aggregate` | `sum(tag, field)`, `avg()`, `count()`, `min()`, `max()` |
+| `uomp.payload` | `upload(data)`, `download(id)`, `info(id)` |
+| `uomp.session` | `submitDeletionProof()`, `finalize()`, `close()`, `trackAccess(key)` |
+| `uomp.audit` | `query({ sessionId, limit })`, `getLastAccess()` |
+| `uomp.auth` | `createSession()`, `grant()`, `revoke()`, `validate()` |
+| `uomp.identity` | `fromWallet(chain)`, `fromSeedPhrase(phrase)` |
+
+---
+
+## 4. 远程访问
+
+### 4.1 用户 Gateway
+
+`apps/gateway` 是用户自托管的 Memory Guard 入口：
+
+```bash
+uomp gateway start               # Gateway + Cloudflare Tunnel
+uomp gateway start --no-tunnel   # 仅 Gateway
+uomp gateway start --browser     # 启用 CORS（浏览器 App 直连）
+```
+
+职责：mTLS 终结、Token 校验（audience + 签名 + 有效期）、Memory/audit 请求转发、Payload 缓存。
+
+### 4.2 Cloud Relay
+
+Cloud Relay 是 Gateway 的无状态公共版本。UOMP 官方运营一个默认实例（`relay.uomp.org`），开源代码允许任何人自建。
+
+| | 用户 Gateway | Cloud Relay |
+|------|------------|------------|
+| 部署 | 用户本地 | 公共云（总是在线） |
+| 看到明文 | ✅ | ❌（Guard 内加密后存储） |
+| 用户负担 | 安装 + 运行 | 零安装 |
+| 适用场景 | 高敏感数据 | 普通使用、Webapp 开发者 |
+
+Relay 不存数据、不读明文——只验 Token + 转发密文。
+
+### 4.3 存储抽象
 
 Memory Store 从硬编码 SQLite 改为可插拔接口 `IMemoryStore`：
 
 ```
 Guard → IMemoryStore ─┬─ SQLiteStore（本地，默认）
                        ├─ EncryptedObjectStore（S3/R2，多设备）
-                       └─ IPFSStore（去中心化，未来）
+                       └─ IPFSStore（去中心化）
 ```
 
-- **SQLite**：现有方式，`~/.uomp/memory.db`
-- **Encrypted Object**：每个 Memory Item 独立 AES-256-GCM 加密，存 S3-compatible 存储
-- **IPFS**：内容寻址存储，去中心化
+- **SQLite**：`~/.uomp/memory.db`，默认，零配置
+- **Encrypted Object**：每个 Memory Item 独立 AES-256-GCM 加密，存 S3-compatible 对象存储。多设备共享同一份加密数据
+- **IPFS**：内容寻址，去中心化（未来）
 
-加密在 Guard 进程内完成，云后端只存密文。密钥由钱包签名派生（HKDF）。
-
-## 7.2 Cloud Relay（零安装公共 Gateway）
-
-Cloud Relay 是一个无状态的公共 Gateway，替代用户本地 Gateway 处理写请求和聚合查询：
-
-```
-Browser App ──写请求──► Cloud Relay (relay.uomp.org) ──► Guard ──► Store
-   │                      ↑
-   │                 只过手密文，没有 masterKey
-   │
-   └── 读请求 ──► S3 直读 + 浏览器内解密（不需要 Relay）
-```
-
-| | 用户 Gateway | Cloud Relay |
-|------|------------|------------|
-| 部署 | 用户本地 `uomp gateway start` | 公共云服务（总是在线） |
-| 知道明文 | ✅ | ❌（Store 加密） |
-| 用户负担 | 安装 + 运行 | 零安装 |
-| 适用 | 高敏感数据 | 普通使用、Webapp 开发者 |
-
-Relay 开源，任何人都能部署。UOMP 官方运营一个作为默认值，用户随时切换。
+加密在 Guard 进程内完成，云后端只存密文。密钥由钱包签名通过 HKDF 派生。
 
 完整设计文档：[`docs/store-abstraction-design.md`](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md)。
 
 ---
 
-## 8. 本地配置文件
+## 5. 认证与授权实现
 
-CLI 初始化后生成：
+### 5.1 Agent 声明（uom.json）
 
-- `~/.uomp/config.json` — 服务端口、数据目录
-- `~/.uomp/uomp.sqlite` — Memory Store
-- `~/.uomp/auth.sqlite` — Session 与黑名单
-- `~/.uomp/audit.sqlite` — 审计日志
-- `~/.uomp/.secrets/` — Ed25519 密钥对（MVP 每次运行重新生成，生产应持久化）
+Agent 在 `uom.json` 中声明 `requested_scopes`、`data_retention_policy`、`external_data_sources` 等。CLI 在 `packages/cli/src/utils/manifest.ts` 中解析并转换为内部 `AgentManifest` 类型。
 
----
+### 5.2 Session 生命周期
 
-## 9. MVP 限制与未来扩展
+```
+[created] ──grant──► [active] ──close/timeout/revoke/deletion-proof──► [closed/expired/revoked]
+```
 
-| 能力 | MVP 状态 | 说明 |
-|------|---------|------|
-| Agent 读取 | ✅ 已实现 | 按 tag/key 授权 |
-| Agent 写入 | ❌ 未开放 | Guard 返回 `503 WRITE_NOT_AVAILABLE` |
-| Agent 删除 | ❌ 未开放 | 同上 |
-| 远程 Profile（Gateway + mTLS） | ✅ 已实现 | `apps/gateway` 提供参考实现；Payload 端到端加密仍待实现 |
-| 聚合查询（`/v1/memory/aggregate`） | ✅ 已实现 | 支持 sum/avg/count/min/max，配合 `aggregation_only` Token |
-| 删除证明（`/v1/sessions/{id}/deletion-proof`） | ✅ 已实现 | Agent 提交签名证明，Session 自动关闭 |
-| 审计查询（`/v1/audit`） | ✅ 已实现 | 支持按 session_id 过滤 |
-| 字段过滤（`allowed_fields`） | ✅ 已实现 | Token 指定返回字段，Guard 过滤 |
-| 身份验证 | ⚠️ 可选 | DID/GPG 框架存在，但验证强度较弱 |
-| 查询限额 | ⚠️ 预留 | `limits` 已写入 Token，但未强制执行 |
+`AuthService.grantSession()` 签发 Capability Token，支持 `allowedFields`、`aggregationOnly`、`taskBound` 等约束。
+
+### 5.3 JWT 实现
+
+- 算法：`EdDSA`（曲线 `Ed25519`），使用 `jose` 库
+- 内部 payload camelCase，JWT claims snake_case
+- Token 包含：`session_id`、`agent_id`、`scopes`、`limits`、`profile`、`audience`、`allowed_fields`、`aggregation_only`、`task_bound`
+
+### 5.4 Guard 鉴权
+
+`MemoryGuard.validateRequest()` 按序校验：签名 → 过期 → 黑名单 → scope → sensitivity。`aggregation_only` Token 拒绝非聚合路径。高敏感数据必须 key 级授权。
 
 ---
 
-## 10. 相关链接
+## 6. 股票分析示例
+
+`examples/stock-analyst/` 是完整的验收示例：
+
+1. `uomp import` 导入持仓 CSV + 风险偏好
+2. `uomp discover` / `uomp connect` 验证 Agent
+3. `uomp authorize` 签发 Token
+4. Agent 读取数据 → 拉取行情 → 分析（P&L、Sharpe、Beta、RSI、情景分析）
+5. 生成双语报告（JSON + Markdown + HTML）
+6. `uomp sessions` / `uomp audit` 审计
+7. `uomp revoke` 撤销
+
+完整步骤见 [`examples/stock-analyst/README.md`](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst/README.md)。
+
+---
+
+## 7. 本地配置文件
+
+```
+~/.uomp/
+├── config.json           # 服务端口、Store 后端配置
+├── user.json             # 用户身份（钱包地址、masterKey hash）
+├── memory.db             # Memory Store（SQLite）
+├── auth.db               # Session 与黑名单
+├── audit.db              # 审计日志
+├── remote-profile.json   # Gateway 配置（endpoint、allowlist）
+├── .secrets/             # Ed25519 密钥对
+└── .gateway-certs/       # Gateway mTLS 证书（CA + server + client）
+```
+
+---
+
+## 8. MVP 限制与未来扩展
+
+| 能力 | 状态 | 说明 |
+|------|------|------|
+| Agent 读取 | ✅ | 按 tag/key/field 授权 |
+| Agent 写入 | ❌ | Guard 返回 `503 WRITE_NOT_AVAILABLE` |
+| 远程 Gateway | ✅ | mTLS + Cloudflare Tunnel + 浏览器 CORS |
+| 聚合查询 | ✅ | sum/avg/count/min/max，配合 `aggregation_only` |
+| 删除证明 | ✅ | Agent 提交签名证明，Session 自动关闭 |
+| 字段过滤 | ✅ | Token 指定 `allowed_fields`，Guard 过滤 |
+| 浏览器 SDK | ✅ | 钱包认证 + S3 直读 + Cloud Relay 写 |
+| Store 抽象 | ⚠️ 设计完成 | SQLite / S3 / IPFS 可插拔，待实现 Phase 2 |
+| Cloud Relay | ⚠️ 设计完成 | 公共 Gateway 实现，待实现 Phase 3.5 |
+| 钱包认证 | ⚠️ 设计完成 | MetaMask / Argent X / Braavos，待实现 Phase 2 |
+| 身份验证 | ⚠️ | DID/GPG 框架存在，验证强度待增强 |
+
+---
+
+## 9. 相关链接
 
 - [协议规范](/spec/)
 - [参考实现仓库](https://github.com/0xaicrypto/uomp-core)
-- [日历示例 Agent](https://github.com/0xaicrypto/uomp-core/tree/main/examples/calendar-agent)
-- [股票分析示例 Agent](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst)
+- [SDK 设计文档](https://github.com/0xaicrypto/uomp-core/tree/main/docs/sdk-design.md)
+- [Store 抽象化设计](https://github.com/0xaicrypto/uomp-core/tree/main/docs/store-abstraction-design.md)
+- [股票分析示例](https://github.com/0xaicrypto/uomp-core/tree/main/examples/stock-analyst)
