@@ -1,5 +1,5 @@
 /**
- * UOMP Browser SDK v2026-07-20.4
+ * UOMP Browser SDK v2026-07-20.5 — PBKDF2 key derivation
  * Self-contained bundle for browser use.
  * No Node.js dependencies. Uses Web Crypto API + window.fetch.
  */
@@ -10,12 +10,15 @@ class UompError extends Error{constructor(code,msg,sid,status){super(msg);this.n
 const UompErrorCode={ACCESS_DENIED:'ACCESS_DENIED',TOKEN_EXPIRED:'TOKEN_EXPIRED',INVALID_TOKEN:'INVALID_TOKEN',NETWORK_ERROR:'NETWORK_ERROR',TIMEOUT:'TIMEOUT',UNKNOWN:'UNKNOWN',QUOTA_EXCEEDED:'QUOTA_EXCEEDED'};
 
 // ── Crypto (Web Crypto API) ────────────────────────────────
-const CRYPTO_AVAILABLE=typeof crypto!=='undefined'&&crypto.subtle;
 async function deriveMasterKey(signature,address,chain){
-  // Use SHA-256 to hash the combined inputs for consistent key material
-  const input=E.encode(signature+'\n'+address.toLowerCase()+'\nuomp-store-v1\n'+chain);
-  const hash=await crypto.subtle.digest('SHA-256',input);
-  return crypto.subtle.importKey('raw',new Uint8Array(hash),{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+  const input=signature+'\n'+address.toLowerCase()+'\n'+chain+'\nuomp-store-v1';
+  const enc=new TextEncoder();
+  // Use PBKDF2 for reliable key derivation (works in all browsers)
+  const keyMaterial=await crypto.subtle.importKey('raw',enc.encode(input),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:enc.encode('uomp-salt'),iterations:100000,hash:'SHA-256'},
+    keyMaterial,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
+  );
 }
 async function encryptData(key,text){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,E.encode(text));return{iv:Array.from(iv),d:Array.from(new Uint8Array(ct))}}
 async function decryptData(key,obj){const iv=new Uint8Array(obj.iv),data=new Uint8Array(obj.d);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data);return D.decode(pt)}
