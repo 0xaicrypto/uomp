@@ -120,7 +120,10 @@ function updateTopbar(ch,addr){
     <span style="color:var(--dim);font-size:.8rem">${storage}</span>
     ${isSample?'<span class="status status-warn">Sample data</span>':''}
     <span class="status status-ok">Encrypted</span>
+    <button class="btn btn-out btn-sm" onclick="disconnectDb()">Disconnect DB</button>
     <button class="btn btn-out btn-sm" onclick="location.reload()">Lock</button>`;
+}
+window.disconnectDb=function(){dropbox=null;if(typeof sessionStorage!=='undefined')sessionStorage.removeItem('uomp_db');updateTopbar();document.getElementById('saveStatus').innerHTML='<span class="status status-ok">Dropbox disconnected</span>'}
 }
 
 async function loadFromDb(){
@@ -164,7 +167,7 @@ async function save(){
       if(ok){
         status.innerHTML='<span class="status status-ok">✓ Saved to Dropbox /Apps/UOMP/</span>';
       }else{
-        status.innerHTML='<span class="status status-err">✗ Dropbox upload failed — try reconnecting</span>';
+        status.innerHTML='<span class="status status-err">✗ Dropbox upload failed. Check popup blocker & try reconnecting.</span>';
         return;
       }
     }catch(err){
