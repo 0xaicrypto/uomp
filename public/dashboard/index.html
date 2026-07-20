@@ -3,104 +3,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UOMP Portfolio Dashboard</title>
+<title>UOMP Portfolio</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   :root { --bg:#0A0A0A; --card:#111; --border:#1F2937; --text:#E5E7EB; --mid:#9CA3AF; --dim:#6B7280; --green:#34D399; --red:#F87171; --blue:#3B82F6; --purple:#8B5CF6; --db:#0061FF; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; }
-  .container { max-width:1200px; margin:0 auto; padding:2rem 1.5rem; }
+  .container { max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
   header { margin-bottom:2rem; }
   h1 { font-size:1.5rem; color:#fff; display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; }
   .logo { width:28px; height:28px; }
   .modes { display:flex; gap:.75rem; flex-wrap:wrap; align-items:flex-start; }
-  .mode-card { flex:1; min-width:300px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.25rem; }
-  .mode-title { font-size:.85rem; font-weight:600; color:var(--mid); margin-bottom:.75rem; text-transform:uppercase; letter-spacing:.5px; }
+  .mode-card { flex:1; min-width:280px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.25rem; }
+  .mode-title { font-size:.8rem; font-weight:600; color:var(--mid); margin-bottom:.75rem; text-transform:uppercase; letter-spacing:.5px; }
   .mode-card input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:.5rem .75rem; border-radius:6px; font-size:.85rem; margin-bottom:.5rem; }
   .mode-card input::placeholder { color:var(--dim); }
-  .mode-card button { width:100%; padding:.6rem; border-radius:6px; font-size:.85rem; font-weight:600; cursor:pointer; border:none; color:#fff; }
-  .btn-gateway { background:var(--blue); }
-  .btn-wallet { background:var(--purple); }
+  .mode-card button, .btn { padding:.6rem 1rem; border-radius:6px; font-size:.85rem; font-weight:600; cursor:pointer; border:none; color:#fff; }
+  .mode-card button { width:100%; }
+  .btn-sm { padding:.35rem .7rem; font-size:.75rem; }
+  .btn-blue { background:var(--blue); }
+  .btn-purple { background:var(--purple); }
   .btn-starknet { background:#EC796B; }
   .btn-dropbox { background:var(--db); }
+  .btn-green { background:#059669; }
+  .btn-red { background:#DC2626; }
+  .btn-outline { background:var(--card); border:1px solid var(--border); color:var(--mid); }
   button:hover { opacity:.9; }
   button:disabled { background:#374151!important; cursor:not-allowed; }
+
   .status { font-size:.8rem; padding:.25rem .6rem; border-radius:4px; display:inline-block; margin-top:.5rem; }
   .status-ok { background:#064E3B; color:var(--green); }
   .status-err { background:#7F1D1D; color:var(--red); }
-  .user-info { display:flex; align-items:center; gap:.75rem; margin-bottom:2rem; padding:.75rem 1rem; background:var(--card); border:1px solid var(--border); border-radius:8px; font-size:.85rem; flex-wrap:wrap; }
-  .user-info .addr { color:var(--purple); font-family:monospace; }
-  .user-info button { padding:.3rem .75rem; font-size:.75rem; background:var(--card); border:1px solid var(--border); color:var(--mid); border-radius:4px; cursor:pointer; }
+  .status-warn { background:#78350F; color:#FBBF24; }
+  .user-bar { display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; padding:.75rem 1rem; background:var(--card); border:1px solid var(--border); border-radius:8px; font-size:.85rem; flex-wrap:wrap; }
+  .addr { color:var(--purple); font-family:monospace; font-size:.8rem; }
 
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.75rem; margin-bottom:2rem; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.25rem; }
-  .card-label { font-size:.8rem; color:var(--mid); margin-bottom:.3rem; }
-  .card-value { font-size:1.5rem; font-weight:700; }
-  .card-sub { font-size:.8rem; color:var(--dim); margin-top:.2rem; }
-  .pos { color:var(--green); } .neg { color:var(--red); }
+  .toolbar { display:flex; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center; }
+  .toolbar .spacer { flex:1; }
 
-  h2 { font-size:1.1rem; margin:2rem 0 1rem; color:#fff; }
+  h2 { font-size:1.1rem; margin:2rem 0 1rem; color:#fff; display:flex; align-items:center; gap:.5rem; }
+
   table { width:100%; border-collapse:collapse; font-size:.83rem; }
   th,td { padding:.5rem .6rem; text-align:right; border-bottom:1px solid var(--border); }
-  th { background:var(--card); color:var(--mid); font-weight:600; }
-  th:first-child,td:first-child { text-align:left; }
-  th:nth-child(2),td:nth-child(2) { text-align:left; }
+  th { background:var(--card); color:var(--mid); font-weight:600; position:sticky; top:0; }
+  th:first-child,td:first-child,th:last-child,td:last-child { text-align:center; }
+  td input,td select { background:var(--bg); border:1px solid var(--border); color:var(--text); padding:.3rem .4rem; border-radius:4px; font-size:.83rem; width:100%; text-align:inherit; }
+  td select { cursor:pointer; }
+  .pos { color:var(--green); } .neg { color:var(--red); }
+  .editable:hover { background:rgba(59,130,246,.1); cursor:text; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; margin:1.5rem 0; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.25rem; }
+  .card-label { font-size:.8rem; color:var(--mid); margin-bottom:.3rem; }
+  .card-value { font-size:1.3rem; font-weight:700; }
 
   .bar-wrap { display:flex; align-items:center; gap:.5rem; margin:.35rem 0; }
   .bar-label { width:110px; font-size:.8rem; color:var(--mid); text-align:right; flex-shrink:0; }
   .bar-track { flex:1; background:var(--border); height:8px; border-radius:4px; overflow:hidden; }
-  .bar-fill { height:100%; border-radius:4px; transition:width .3s; }
-  .bar-pct { width:48px; font-size:.8rem; color:var(--dim); }
-  .signal { display:flex; align-items:center; gap:.5rem; padding:.35rem 0; border-bottom:1px solid var(--border); font-size:.83rem; }
+  .bar-fill { height:100%; border-radius:4px; }
 
+  .report-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:.5rem; font-size:.83rem; }
+  .report-card .date { color:var(--dim); font-size:.75rem; }
+  .report-card pre { margin-top:.5rem; white-space:pre-wrap; color:var(--mid); max-height:200px; overflow:auto; }
+
+  .empty { text-align:center; color:var(--dim); padding:3rem 1rem; }
   .footer { margin-top:3rem; padding-top:1rem; border-top:1px solid var(--border); color:var(--dim); font-size:.75rem; text-align:center; }
-  .footer a { color:var(--mid); }
-  @media(max-width:640px) { .modes { flex-direction:column; } .container { padding:1rem; } }
+  @media(max-width:640px){ .modes{flex-direction:column} .container{padding:1rem} }
 </style>
 </head>
 <body>
 <div class="container">
-  <header>
-    <h1>
-      <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      UOMP Portfolio
-    </h1>
-    <div class="modes">
-      <!-- Gateway -->
-      <div class="mode-card" id="gatewayCard">
-        <div class="mode-title">Gateway Mode · uomp gateway start</div>
-        <input id="gwUrl" placeholder="Gateway URL (https://xxx.trycloudflare.com)">
-        <input id="gwToken" placeholder="Capability Token (eyJhbG...)" type="password">
-        <button class="btn-gateway" onclick="connectGateway()">Connect via Gateway</button>
-        <div id="gwStatus"></div>
-      </div>
-      <!-- Wallet + Local -->
-      <div class="mode-card" id="directCard">
-        <div class="mode-title">Direct Mode · Wallet + Browser Storage</div>
-        <button class="btn-wallet" onclick="connectWallet('ethereum')">🔑 Connect MetaMask</button>
-        <button class="btn-starknet" onclick="connectWallet('starknet')" style="margin-top:.5rem">🦁 Connect Argent X</button>
-        <div style="font-size:.75rem;color:var(--dim);margin-top:.5rem">签名 → 派生密钥 → localStorage 加密存储</div>
-        <div id="directStatus"></div>
-      </div>
-      <!-- Dropbox -->
-      <div class="mode-card" id="dropboxCard">
-        <div class="mode-title">Dropbox Mode · 数据存你的 Dropbox</div>
-        <button class="btn-dropbox" onclick="connectDropbox()">📦 Connect Dropbox</button>
-        <div style="font-size:.75rem;color:var(--dim);margin-top:.5rem">OAuth → 加密 → /Apps/UOMP/</div>
-        <div id="dropboxStatus"></div>
-      </div>
+<header>
+  <h1><svg class="logo" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>UOMP Portfolio</h1>
+  <div class="modes">
+    <div class="mode-card" id="gatewayCard">
+      <div class="mode-title">Gateway · uomp gateway start</div>
+      <input id="gwUrl" placeholder="Gateway URL">
+      <input id="gwToken" placeholder="Token (eyJhbG...)" type="password">
+      <button class="btn-blue btn" onclick="connectGateway()">Connect via Gateway</button>
+      <div id="gwStatus"></div>
     </div>
-    <div id="userInfo" class="user-info" style="display:none"></div>
-  </header>
-
-  <div class="grid" id="summary"></div>
-  <div id="holdings"></div>
-  <div id="sectors" style="display:none"></div>
-  <div id="signals" style="display:none"></div>
-
-  <div class="footer">
-    Powered by <a href="https://www.uomp.org">UOMP</a> · Data encrypted. You hold the keys.
+    <div class="mode-card" id="directCard">
+      <div class="mode-title">Wallet + Browser</div>
+      <button class="btn-purple btn" onclick="connectWallet('ethereum')">🔑 MetaMask</button>
+      <button class="btn-starknet btn" onclick="connectWallet('starknet')" style="margin-top:.5rem">🦁 Argent X</button>
+      <div style="font-size:.75rem;color:var(--dim);margin-top:.5rem">签名 → 派生密钥 → 浏览器本地加密</div>
+      <div id="directStatus"></div>
+    </div>
+    <div class="mode-card" id="dropboxCard">
+      <div class="mode-title">Dropbox · 你的云存储</div>
+      <button class="btn-dropbox btn" onclick="connectDropbox()">📦 Connect Dropbox</button>
+      <div style="font-size:.75rem;color:var(--dim);margin-top:.5rem">OAuth → /Apps/UOMP/ (AES-256 加密)</div>
+      <div id="dropboxStatus"></div>
+    </div>
   </div>
+  <div id="userBar" class="user-bar" style="display:none"></div>
+</header>
+
+<main id="app" style="display:none">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-green" onclick="addRow()">+ Add Stock</button>
+    <button class="btn btn-outline" onclick="triggerCSV()">📄 Import CSV</button>
+    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="handleCSV(event)">
+    <span class="spacer"></span>
+    <span style="font-size:.75rem;color:var(--dim)" id="saveStatus"></span>
+    <button class="btn btn-blue" id="saveBtn" onclick="saveData()" style="display:none">💾 Save Changes</button>
+  </div>
+
+  <!-- Holdings Table -->
+  <h2>📊 Holdings · <span style="font-weight:400;font-size:.85rem;color:var(--mid)">Click any cell to edit</span></h2>
+  <div style="overflow-x:auto">
+    <table id="holdingsTable"><thead><tr>
+      <th style="width:60px">Symbol</th><th>Name</th><th style="width:80px">Qty</th><th style="width:80px">Cost</th><th style="width:100px">Sector</th><th style="width:60px">Value</th><th style="width:70px">P&amp;L</th><th style="width:40px"></th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <div id="summaryGrid" class="grid"></div>
+
+  <!-- Reports -->
+  <h2>📝 Reports</h2>
+  <div id="reports"><div class="empty">No reports yet. Run the Agent to generate analysis.</div></div>
+
+  <!-- Agent Section -->
+  <h2>🤖 Run Analysis Agent</h2>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;font-size:.84rem">
+    <p style="color:var(--mid);margin-bottom:1rem">Send your portfolio to the Stock Analyst Agent to get a full investment analysis (P&L, Sharpe, Beta, signals, scenarios).</p>
+    <div id="agentInstructions" style="display:none">
+      <p style="color:var(--green);margin-bottom:.5rem">✓ Gateway running at:</p>
+      <code id="agentGateway" style="display:block;background:var(--bg);padding:.5rem;border-radius:4px;margin-bottom:1rem;word-break:break-all"></code>
+      <p style="color:var(--green);margin-bottom:.5rem">Run this on your machine or anywhere with the token:</p>
+      <pre id="agentCommands" style="background:var(--bg);padding:.75rem;border-radius:4px;overflow:auto;font-size:.8rem"></pre>
+      <p style="color:var(--dim);margin-top:.5rem">Or paste this token into the <a href="https://uomp-stock-analyst-mvblm.ondigitalocean.app" target="_blank">DO Stock Analyst</a> web UI.</p>
+    </div>
+    <div style="display:flex;gap:.5rem;margin-top:.5rem">
+      <input id="agentGwUrl" placeholder="Gateway URL (uomp gateway start --browser)" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:.5rem;border-radius:6px;font-size:.85rem">
+      <button class="btn btn-green" onclick="generateAgentLink()">Generate Agent Token</button>
+    </div>
+    <div id="agentStatus" style="margin-top:.5rem"></div>
+  </div>
+</main>
+
+<div class="footer">Powered by <a href="https://www.uomp.org">UOMP</a> · Data encrypted. You hold the keys.</div>
 </div>
 
 <script>
@@ -109,337 +152,338 @@
 // ═══════════════════════════════════════════════════════════════
 class GatewayClient {
   constructor(token,url){this.token=token;this.base=url.replace(/\/$/,'');}
-  async get(path){
-    const r=await fetch(`${this.base}${path}`,{headers:{Authorization:`Bearer ${this.token}`,Accept:'application/json','X-UOMP-Agent-Id':'dashboard'}});
-    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}
-    return r.json();
-  }
+  async get(path){const r=await fetch(`${this.base}${path}`,{headers:{Authorization:`Bearer ${this.token}`,Accept:'application/json','X-UOMP-Agent-Id':'dashboard'}});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}return r.json();}
   async getByTag(t){const d=await this.get(`/v1/memory?tag=${encodeURIComponent(t)}`);return d.items||[];}
   async health(){return this.get('/v1/health');}
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Crypto (Web Crypto API — browser native)
+// Crypto (Web Crypto API)
 // ═══════════════════════════════════════════════════════════════
 const enc=new TextEncoder();
-
-async function deriveMasterKey(signature, address, chain) {
-  const sigBytes=enc.encode(signature).slice(0,64);
-  const addrBytes=enc.encode(address.toLowerCase());
-  const ikm=new Uint8Array([...sigBytes,...addrBytes]).slice(0,64);
+async function deriveMasterKey(sig,addr,chain){
+  const s=enc.encode(sig).slice(0,64),a=enc.encode(addr.toLowerCase());
+  const ikm=new Uint8Array([...s,...a]).slice(0,64);
   const k=await crypto.subtle.importKey('raw',ikm,{name:'HKDF'},false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:enc.encode('uomp-store-v1'),info:enc.encode(`${chain}:${address}`)},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:enc.encode('uomp-store-v1'),info:enc.encode(`${chain}:${addr}`)},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
-
-async function encryptData(cryptoKey, plaintext) {
+async function encrypt(cryptoKey,plaintext){
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},cryptoKey,enc.encode(plaintext));
   return {iv:Array.from(iv),data:Array.from(new Uint8Array(ct))};
 }
-
-async function decryptData(cryptoKey, encData) {
-  const iv=new Uint8Array(encData.iv);const data=new Uint8Array(encData.data);
+async function decrypt(cryptoKey,encData){
+  const iv=new Uint8Array(encData.iv),data=new Uint8Array(encData.data);
   const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},cryptoKey,data);
   return new TextDecoder().decode(pt);
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Dropbox Storage (PKCE OAuth + API)
+// Dropbox PKCE OAuth + API
 // ═══════════════════════════════════════════════════════════════
-const DB_APP_KEY = 'k6k81wrvc90ke45';
-const DB_REDIRECT = window.location.origin + window.location.pathname;
-const DB_TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
+const DB_KEY='k6k81wrvc90ke45',DB_REDIRECT=location.origin+location.pathname;
+const DB_TOKEN='https://api.dropboxapi.com/oauth2/token';
+const DB_CONTENT='https://content.dropboxapi.com/2';
+const DB_API='https://api.dropboxapi.com/2';
 
-function dbToken() { return sessionStorage.getItem('uomp_db_token')||''; }
-function dbSetToken(t) { sessionStorage.setItem('uomp_db_token', t); }
-
-// PKCE helpers
-function generateCodeVerifier() {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-async function generateCodeChallenge(verifier) {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-async function exchangeCodeForToken(code, codeVerifier) {
-  const resp = await fetch(DB_TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code, grant_type: 'authorization_code',
-      client_id: DB_APP_KEY,
-      code_verifier: codeVerifier,
-      redirect_uri: DB_REDIRECT,
-    })
-  });
-  if (!resp.ok) throw new Error('Token exchange failed');
-  const data = await resp.json();
-  return data.access_token;
-}
+function gToken(){return sessionStorage.getItem('uomp_db')||'';}
+function sToken(t){sessionStorage.setItem('uomp_db',t);}
+function dbPrefix(p){return`/Apps/UOMP${p}`;}
 
 class DropboxStore {
-  constructor(token) { this.token = token; }
-  // Upload a file
-  async upload(path, data) {
-    const r = await fetch(`${DB_CONTENT}/files/upload`, {
-       method:'POST',
-       headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/octet-stream','Dropbox-API-Arg':JSON.stringify({path:`${DB_PREFIX}/${path}`,mode:'overwrite'})},
-       body: typeof data==='string'? new TextEncoder().encode(data) : data
-    });
+  constructor(t){this.t=t;}
+  async upload(path,data){
+    const r=await fetch(`${DB_CONTENT}/files/upload`,{method:'POST',headers:{Authorization:`Bearer ${this.t}`,'Content-Type':'application/octet-stream','Dropbox-API-Arg':JSON.stringify({path:dbPrefix(`/${path}`),mode:'overwrite'})},body:typeof data==='string'?enc.encode(data):data});
     return r.ok;
   }
-  // Download a file
-  async download(path) {
-    const r = await fetch(`${DB_CONTENT}/files/download`, {
-      method:'POST',
-      headers:{Authorization:`Bearer ${this.token}`,'Dropbox-API-Arg':JSON.stringify({path:`${DB_PREFIX}/${path}`})}
-    });
-    if(!r.ok) return null;
-    return new Uint8Array(await r.arrayBuffer());
+  async download(path){
+    const r=await fetch(`${DB_CONTENT}/files/download`,{method:'POST',headers:{Authorization:`Bearer ${this.t}`,'Dropbox-API-Arg':JSON.stringify({path:dbPrefix(`/${path}`)})}});
+    if(!r.ok)return null;return new Uint8Array(await r.arrayBuffer());
   }
-  // List folder
-  async list(path) {
-    const r = await fetch(`${DB_API}/files/list_folder`, {
-      method:'POST',
-      headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({path:`${DB_PREFIX}${path}`,limit:100})
-    });
-    if(!r.ok) return [];
-    const d = await r.json();
-    return d.entries||[];
+  async list(path){
+    const r=await fetch(`${DB_API}/files/list_folder`,{method:'POST',headers:{Authorization:`Bearer ${this.t}`,'Content-Type':'application/json'},body:JSON.stringify({path:dbPrefix(path),limit:100})});
+    if(!r.ok)return[];const d=await r.json();return d.entries||[];
   }
-  // Delete a file
-  async deleteFile(path) {
-    await fetch(`${DB_API}/files/delete_v2`, {
-      method:'POST',
-      headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({path:`${DB_PREFIX}/${path}`})
-    });
-  }
+  async deleteFile(path){await fetch(`${DB_API}/files/delete_v2`,{method:'POST',headers:{Authorization:`Bearer ${this.t}`,'Content-Type':'application/json'},body:JSON.stringify({path:dbPrefix(`/${path}`)})});}
 }
+
+// PKCE
+function genVerifier(){const a=new Uint8Array(32);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+async function genChallenge(v){const h=await crypto.subtle.digest('SHA-256',enc.encode(v));return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+async function exchangeCode(code,verifier){
+  const r=await fetch(DB_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code,grant_type:'authorization_code',client_id:DB_KEY,code_verifier:verifier,redirect_uri:DB_REDIRECT})});
+  if(!r.ok)throw new Error('Token exchange failed');const d=await r.json();return d.access_token;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// App State
+// ═══════════════════════════════════════════════════════════════
+let cryptoKey=null,userId=null,storage='local',dropbox=null;
+let holdings=[],reports=[],changed=false;
+
+const SAMPLE=[{sym:'AAPL',name:'Apple Inc.',qty:'100',cost:'150',sector:'Technology'},{sym:'MSFT',name:'Microsoft Corp.',qty:'40',cost:'320',sector:'Technology'},{sym:'GOOGL',name:'Alphabet Inc.',qty:'30',cost:'140',sector:'Technology'},{sym:'NVDA',name:'NVIDIA Corp.',qty:'30',cost:'300',sector:'Technology'},{sym:'TSLA',name:'Tesla Inc.',qty:'50',cost:'200',sector:'Consumer Cyclical'},{sym:'AMZN',name:'Amazon.com',qty:'25',cost:'170',sector:'Consumer Cyclical'},{sym:'JPM',name:'JPMorgan Chase',qty:'60',cost:'155',sector:'Financial'},{sym:'BAC',name:'Bank of America',qty:'200',cost:'32',sector:'Financial'},{sym:'JNJ',name:'Johnson & Johnson',qty:'40',cost:'160',sector:'Healthcare'},{sym:'XOM',name:'Exxon Mobil',qty:'50',cost:'100',sector:'Energy'}];
+const SECTORS=['Technology','Consumer Cyclical','Financial','Healthcare','Energy','Utilities','Real Estate','Materials','Industrials','Communication','Other'];
+
+function localGet(k){try{const d=localStorage.getItem('uomp_'+k);return d?JSON.parse(d):null}catch{return null}}
+function localSet(k,v){localStorage.setItem('uomp_'+k,JSON.stringify(v))}
 
 // ═══════════════════════════════════════════════════════════════
 // Wallet Connection
 // ═══════════════════════════════════════════════════════════════
-let currentCryptoKey=null, currentUserId=null, currentStorage=null, currentDropbox=null;
-const STORE_PREFIX='uomp_enc_';
-
-function localGet(userId){try{const d=localStorage.getItem(STORE_PREFIX+userId);return d?JSON.parse(d):null}catch{return null}}
-function localSet(userId,data){localStorage.setItem(STORE_PREFIX+userId,JSON.stringify(data))}
-
-async function connectWallet(chain) {
-  const status = document.getElementById('directStatus');
-  try {
-    status.innerHTML='<span class="status status-ok">Requesting wallet...</span>';
-    let address,signature;
-
+async function connectWallet(chain){
+  const s=document.getElementById('directStatus');
+  try{
+    s.innerHTML='<span class="status status-ok">Requesting wallet...</span>';
+    let addr,sig;
     if(chain==='ethereum'){
       if(!window.ethereum)throw new Error('MetaMask not detected');
-      const acc=await window.ethereum.request({method:'eth_requestAccounts'});
-      address=acc[0];
-      signature=await window.ethereum.request({method:'personal_sign',params:['UOMP Store v1',address]});
-    }else if(chain==='starknet'){
+      const a=await window.ethereum.request({method:'eth_requestAccounts'});addr=a[0];
+      sig=await window.ethereum.request({method:'personal_sign',params:['UOMP Store v1',addr]});
+    }else{
       if(!window.starknet)throw new Error('Argent X not detected');
-      await window.starknet.enable();
-      address=window.starknet.selectedAddress;
-      if(!address)throw new Error('No account selected');
+      await window.starknet.enable();addr=window.starknet.selectedAddress;
+      if(!addr)throw new Error('No account');
       const td={domain:{name:'UOMP Store',version:'1',chainId:'SN_MAIN'},types:{StarkNetDomain:[{name:'name',type:'felt'},{name:'version',type:'felt'},{name:'chainId',type:'felt'}],Message:[{name:'message',type:'felt'}]},primaryType:'Message',message:{message:'UOMP Store v1'}};
-      const r=await window.starknet.account.signMessage(td);
-      signature=Array.isArray(r)?r.join(','):String(r);
-    }else throw new Error('Unknown chain');
-
-    status.innerHTML='<span class="status status-ok">Deriving key...</span>';
-    currentCryptoKey=await deriveMasterKey(signature,address,chain);
-    currentUserId=`${chain}:${address.toLowerCase()}`;
-    currentStorage='local';
-
-    let holdings,risk;
-    const stored=localGet(currentUserId);
-    if(stored){
-      try { const p=await decryptData(currentCryptoKey,stored);const d=JSON.parse(p);holdings=d.holdings;risk=d.risk;status.innerHTML='<span class="status status-ok">✓ Decrypted from browser</span>'; }
-      catch { /* corrupted */ }
+      const r=await window.starknet.account.signMessage(td);sig=Array.isArray(r)?r.join(','):String(r);
     }
-    if(!holdings){
-      holdings=SAMPLE;risk=SAMPLE_RISK;
-      const e=await encryptData(currentCryptoKey,JSON.stringify({holdings,risk}));
-      localSet(currentUserId,e);
-      status.innerHTML='<span class="status status-ok">✓ Initialized & encrypted</span>';
-    }
-    showConnected(chain,address);
-    renderDashboard(holdings,risk);
-  }catch(e){status.innerHTML=`<span class="status status-err">✗ ${e.message}</span>`}
+    s.innerHTML='<span class="status status-ok">Deriving key...</span>';
+    cryptoKey=await deriveMasterKey(sig,addr,chain);userId=`${chain}:${addr.toLowerCase()}`;storage='local';
+    await loadData();showUI(chain,addr);
+  }catch(e){s.innerHTML=`<span class="status status-err">✗ ${e.message}</span>`}
 }
 
-async function connectDropbox() {
-  const status = document.getElementById('dropboxStatus');
-
-  // Check for OAuth code in URL (PKCE callback)
-  const h = new URLSearchParams(window.location.search);
-  const code = h.get('code');
-
-  if (code) {
-    // Exchange code for token
-    status.innerHTML = '<span class="status status-ok">Exchanging code...</span>';
-    try {
-      const verifier = sessionStorage.getItem('uomp_db_code_verifier');
-      if (!verifier) throw new Error('Code verifier not found. Restart Dropbox login.');
-      const accessToken = await exchangeCodeForToken(code, verifier);
-      dbSetToken(accessToken);
-      sessionStorage.removeItem('uomp_db_code_verifier');
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
-      status.innerHTML = '<span class="status status-ok">✓ Dropbox connected</span>';
-      currentDropbox = new DropboxStore(accessToken);
-      if (currentCryptoKey) await loadFromDropbox();
-      else status.innerHTML = '<span class="status status-ok">✓ Dropbox ready. Connect wallet to decrypt.</span>';
-    } catch(e) {
-      status.innerHTML = `<span class="status status-err">✗ ${e.message}</span>`;
-    }
-    return;
+async function connectDropbox(){
+  const s=document.getElementById('dropboxStatus');
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('code')){
+    s.innerHTML='<span class="status status-ok">Exchanging code...</span>';
+    try{
+      const v=sessionStorage.getItem('uomp_db_v');if(!v)throw new Error('Restart login');
+      const t=await exchangeCode(qs.get('code'),v);sToken(t);sessionStorage.removeItem('uomp_db_v');
+      history.replaceState({},'',location.pathname);
+      s.innerHTML='<span class="status status-ok">✓ Dropbox connected</span>';
+      dropbox=new DropboxStore(t);storage='dropbox';
+      if(cryptoKey) await loadData();
+      else s.innerHTML='<span class="status status-ok">✓ Dropbox ready. Connect wallet to decrypt.</span>';
+    }catch(e){s.innerHTML=`<span class="status status-err">✗ ${e.message}</span>`}return;
   }
-
-  // Check sessionStorage for existing token
-  const token = dbToken();
-  if (token) {
-    status.innerHTML = '<span class="status status-ok">✓ Dropbox connected</span>';
-    currentDropbox = new DropboxStore(token);
-    if (currentCryptoKey) await loadFromDropbox();
-    return;
-  }
-
-  // Start PKCE flow: redirect to Dropbox
-  status.innerHTML = '<span class="status status-ok">Redirecting to Dropbox...</span>';
-  const codeVerifier = generateCodeVerifier();
-  sessionStorage.setItem('uomp_db_code_verifier', codeVerifier);
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
-  const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DB_APP_KEY}&response_type=code&code_challenge=${codeChallenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(DB_REDIRECT)}`;
-  window.location.href = authUrl;
+  if(gToken()){dropbox=new DropboxStore(gToken());storage='dropbox';s.innerHTML='<span class="status status-ok">✓ Dropbox</span>';if(cryptoKey)await loadData();return}
+  s.innerHTML='<span class="status status-ok">Redirecting...</span>';
+  const v=genVerifier();sessionStorage.setItem('uomp_db_v',v);
+  const c=await genChallenge(v);
+  location.href=`https://www.dropbox.com/oauth2/authorize?client_id=${DB_KEY}&response_type=code&code_challenge=${c}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(DB_REDIRECT)}`;
 }
 
-async function loadFromDropbox() {
-  if (!currentDropbox||!currentCryptoKey||!currentUserId) return;
-  const status = document.getElementById('dropboxStatus');
-  try {
-    currentStorage='dropbox';
-    // Download encrypted portfolio from Dropbox
-    const raw = await currentDropbox.download('holdings.enc');
-    if (raw) {
-      const encData = JSON.parse(new TextDecoder().decode(raw));
-      const plain = await decryptData(currentCryptoKey, encData);
-      const d = JSON.parse(plain);
-      renderDashboard(d.holdings,d.risk);
-      status.innerHTML='<span class="status status-ok">✓ Loaded from Dropbox (encrypted)</span>';
-    } else {
-      // First time — encrypt sample data and upload to Dropbox
-      const e = await encryptData(currentCryptoKey,JSON.stringify({holdings:SAMPLE,risk:SAMPLE_RISK}));
-      await currentDropbox.upload('holdings.enc', JSON.stringify(e));
-      renderDashboard(SAMPLE,SAMPLE_RISK);
-      status.innerHTML='<span class="status status-ok">✓ Initialized on Dropbox (encrypted)</span>';
+async function loadData(){
+  try{
+    let raw=null;
+    if(storage==='dropbox'&&dropbox) raw=await dropbox.download('holdings.enc');
+    if(!raw&&storage==='local') raw=localGet(userId);
+    if(raw&&cryptoKey){
+      const plain=await decrypt(cryptoKey,storage==='dropbox'?JSON.parse(new TextDecoder().decode(raw)):raw);
+      const d=JSON.parse(plain);holdings=d.holdings||SAMPLE;reports=d.reports||[];
     }
-    document.getElementById('directCard').style.display='none';
-    document.getElementById('gatewayCard').style.display='none';
-    updateUserInfo();
-  } catch(e) { status.innerHTML=`<span class="status status-err">✗ ${e.message}</span>`; }
+    if(!holdings.length){holdings=SAMPLE.map(h=>({...h}));reports=[];}
+    // Load reports from Dropbox too
+    if(storage==='dropbox'&&dropbox){
+      const reportList=await dropbox.list('/reports');
+      for(const entry of reportList){
+        if(entry['.tag']==='file'&&!reports.find(r=>r.name===entry.name)){
+          const rd=await dropbox.download(`reports/${entry.name}`);
+          if(rd){try{const plain=await decrypt(cryptoKey,JSON.parse(new TextDecoder().decode(rd)));reports.push({name:entry.name,date:entry.client_modified,content:plain});}catch{}}
+        }
+      }
+    }
+    renderAll();
+  }catch(e){console.error(e);holdings=SAMPLE.map(h=>({...h}));reports=[];renderAll();}
 }
 
-function showConnected(chain,address) {
+async function saveData(){
+  if(!cryptoKey)return alert('Connect wallet first');
+  const saveObj={holdings,reports:reports.slice(0,10)};
+  const plain=JSON.stringify(saveObj);
+  const encData=await encrypt(cryptoKey,plain);
+  if(storage==='dropbox'&&dropbox) await dropbox.upload('holdings.enc',JSON.stringify(encData));
+  if(storage==='local') localSet(userId,encData);
+  changed=false;
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('saveStatus').innerHTML='<span class="status status-ok">✓ Saved</span>';
+  setTimeout(()=>document.getElementById('saveStatus').innerHTML='',2000);
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CSV Import
+// ═══════════════════════════════════════════════════════════════
+function triggerCSV(){document.getElementById('csvFile').click();}
+function handleCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const text=ev.target.result;const lines=text.split('\n').filter(l=>l.trim());
+    if(lines.length<2)return alert('Invalid CSV');
+    const headers=lines[0].toLowerCase().split(',').map(h=>h.trim());
+    const symIdx=headers.findIndex(h=>h==='symbol'||h==='sym'||h==='ticker');
+    const nameIdx=headers.findIndex(h=>h==='name'||h==='company');
+    const qtyIdx=headers.findIndex(h=>h==='quantity'||h==='qty'||h==='shares');
+    const costIdx=headers.findIndex(h=>h==='cost_basis'||h==='cost'||h==='price');
+    const secIdx=headers.findIndex(h=>h==='sector');
+    if(symIdx<0)return alert('CSV must have a "symbol" column');
+    const imported=[];
+    for(let i=1;i<lines.length;i++){
+      const cols=lines[i].split(',').map(c=>c.trim());
+      if(!cols[symIdx])continue;
+      imported.push({sym:cols[symIdx],name:nameIdx>=0?cols[nameIdx]||cols[symIdx]:cols[symIdx],qty:qtyIdx>=0?cols[qtyIdx]||'0':'0',cost:costIdx>=0?cols[costIdx]||'0':'0',sector:secIdx>=0?cols[secIdx]||'Other':'Other'});
+    }
+    holdings=imported;changed=true;
+    document.getElementById('saveBtn').style.display='inline-block';
+    renderAll();
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Table Editing
+// ═══════════════════════════════════════════════════════════════
+function addRow(){holdings.push({sym:'NEW',name:'New Stock',qty:'0',cost:'0',sector:'Other'});changed=true;document.getElementById('saveBtn').style.display='inline-block';renderAll();}
+function deleteRow(i){holdings.splice(i,1);changed=true;document.getElementById('saveBtn').style.display='inline-block';renderAll();}
+function editCell(i,field,value){holdings[i][field]=value;changed=true;document.getElementById('saveBtn').style.display='inline-block';renderAll();}
+function onCellKey(e,i,field){if(e.key==='Enter'){editCell(i,field,e.target.value);e.target.blur();renderAll();}}
+
+// ═══════════════════════════════════════════════════════════════
+// Render
+// ═══════════════════════════════════════════════════════════════
+function fmt(n){const v=parseFloat(n);return isNaN(v)?'0':v.toFixed(2);}
+function renderAll(){
+  // Table
+  const tbody=document.getElementById('holdingsTable').querySelector('tbody');
+  tbody.innerHTML=holdings.map((h,i)=>{
+    const q=parseFloat(h.qty)||0,c=parseFloat(h.cost)||0,val=q*c,pnl=0;
+    return `<tr>
+      <td><input value="${h.sym}" onchange="editCell(${i},'sym',this.value)" onkeydown="onCellKey(event,${i},'sym')" style="width:60px"></td>
+      <td><input value="${h.name||''}" onchange="editCell(${i},'name',this.value)" onkeydown="onCellKey(event,${i},'name')"></td>
+      <td><input value="${h.qty}" onchange="editCell(${i},'qty',this.value)" onkeydown="onCellKey(event,${i},'qty')" type="number" style="width:80px"></td>
+      <td><input value="${h.cost}" onchange="editCell(${i},'cost',this.value)" onkeydown="onCellKey(event,${i},'cost')" type="number" style="width:80px"></td>
+      <td><select onchange="editCell(${i},'sector',this.value)">${SECTORS.map(s=>`<option value="${s}" ${h.sector===s?'selected':''}>${s}</option>`).join('')}</select></td>
+      <td style="color:var(--mid)">$${fmt(val)}</td>
+      <td class="${pnl>=0?'pos':'neg'}">$${fmt(pnl)}</td>
+      <td><button class="btn btn-red btn-sm" onclick="deleteRow(${i})" title="Delete">×</button></td>
+    </tr>`;
+  }).join('');
+
+  // Summary
+  let tc=0,tv=0;const secs={};
+  for(const h of holdings){const q=parseFloat(h.qty)||0,c=parseFloat(h.cost)||0,val=q*c;tc+=val;tv+=val;const s=h.sector||'Other';secs[s]=(secs[s]||0)+val;}
+  const hhi=holdings.reduce((s,h)=>{const v=(parseFloat(h.qty)||0)*(parseFloat(h.cost)||0);const w=tv>0?(v/tv)*100:0;return s+w*w},0);
+  document.getElementById('summaryGrid').innerHTML=`
+    <div class="card"><div class="card-label">Portfolio Value</div><div class="card-value">$${fmt(tv)}</div></div>
+    <div class="card"><div class="card-label">HHI</div><div class="card-value">${hhi.toFixed(0)}</div></div>
+    <div class="card"><div class="card-label">Positions</div><div class="card-value">${holdings.length}</div></div>
+    <div class="card"><div class="card-label">Sectors</div><div class="card-value">${Object.keys(secs).length}</div></div>
+  `;
+
+  // Reports
+  const rDiv=document.getElementById('reports');
+  if(!reports.length){rDiv.innerHTML='<div class="empty">No reports yet. Connect an Agent to generate analysis.</div>';}
+  else{rDiv.innerHTML=reports.map(r=>`<div class="report-card"><div class="date">${r.date||r.name}</div><pre>${(r.content||'').slice(0,500)}</pre></div>`).join('');}
+}
+
+function showUI(chain,addr){
   document.getElementById('directCard').style.display='none';
   document.getElementById('gatewayCard').style.display='none';
-  updateUserInfo();
+  document.getElementById('dropboxCard').style.display='none';
+  document.getElementById('userBar').style.display='flex';
+  document.getElementById('userBar').innerHTML=`
+    <span style="color:var(--mid)">Storage:</span><span class="addr" style="color:var(--db)">${storage==='dropbox'?'Dropbox':'Browser (localStorage)'}</span>
+    <span style="color:var(--mid)">ID:</span><span class="addr">${userId.slice(0,20)}...</span>
+    <span class="status status-warn" id="sampleWarn" style="${isSampleData?'':'display:none'}">⚠ Sample data — import your CSV or edit above</span>
+    <button class="btn btn-outline btn-sm" onclick="disconnect()">Disconnect</button>
+  `;
+  document.getElementById('app').style.display='block';
+  if(changed)document.getElementById('saveBtn').style.display='inline-block';
 }
 
-function updateUserInfo() {
-  const div=document.getElementById('userInfo');div.style.display='flex';
-  const storage=currentStorage==='dropbox'?'Dropbox':currentStorage==='local'?'Browser':'Gateway';
-  div.innerHTML=`<span style="color:var(--mid)">Storage:</span><span class="addr" style="color:var(--db)">${storage}</span>${currentUserId?`<span style="color:var(--mid)">ID:</span><span class="addr">${currentUserId.slice(0,24)}...</span>`:''}<button onclick="disconnect()">Disconnect</button>`;
-}
-
-function disconnect(){currentCryptoKey=null;currentUserId=null;currentStorage=null;dbSetToken('');location.reload();}
-
-// ═══════════════════════════════════════════════════════════════
-// Gateway Mode
-// ═══════════════════════════════════════════════════════════════
 async function connectGateway(){
-  const url=document.getElementById('gwUrl').value.trim(),token=document.getElementById('gwToken').value.trim(),s=document.getElementById('gwStatus');
-  if(!token||!url){s.innerHTML='<span class="status status-err">Enter URL & Token</span>';return}
+  const u=document.getElementById('gwUrl').value.trim(),t=document.getElementById('gwToken').value.trim(),s=document.getElementById('gwStatus');
+  if(!t||!u){s.innerHTML='<span class="status status-err">Enter URL & Token</span>';return}
   try{
-    const c=new GatewayClient(token,url);await c.health();
-    s.innerHTML='<span class="status status-ok">✓ Connected</span>';
+    const c=new GatewayClient(t,u);await c.health();s.innerHTML='<span class="status status-ok">✓ Connected</span>';
     const h=await c.getByTag('portfolio:holdings'),r=await c.getByTag('profile:risk');
+    holdings=h.map(i=>({sym:i.value.symbol||i.key,name:i.value.name||'',qty:i.value.quantity||'0',cost:i.value.cost_basis||'0',sector:i.value.sector||'Other'}));
+    const risk=r[0]?.value||{};
     document.getElementById('directCard').style.display='none';
     document.getElementById('dropboxCard').style.display='none';
-    currentStorage='gateway';updateUserInfo();
-    renderDashboard(h,r[0]?.value||{});
+    storage='gateway';
+    document.getElementById('userBar').style.display='flex';
+    document.getElementById('userBar').innerHTML=`<span class="status status-ok">Gateway Mode</span><span style="color:var(--dim);font-size:.8rem">${u}</span><button class="btn btn-outline btn-sm" onclick="disconnect()">Disconnect</button>`;
+    document.getElementById('app').style.display='block';
+    document.getElementById('saveBtn').style.display='none';
+    renderAll();
   }catch(e){s.innerHTML=`<span class="status status-err">✗ ${e.message}</span>`}
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Dashboard Rendering
+// Agent Integration
 // ═══════════════════════════════════════════════════════════════
-const SAMPLE=[
-  {key:'AAPL',value:{symbol:'AAPL',name:'Apple',quantity:'100',cost_basis:'150',market_value:'22700',sector:'Technology'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'MSFT',value:{symbol:'MSFT',name:'Microsoft',quantity:'40',cost_basis:'320',market_value:'18000',sector:'Technology'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'GOOGL',value:{symbol:'GOOGL',name:'Alphabet',quantity:'30',cost_basis:'140',market_value:'5400',sector:'Technology'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'NVDA',value:{symbol:'NVDA',name:'NVIDIA',quantity:'30',cost_basis:'300',market_value:'13500',sector:'Technology'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'TSLA',value:{symbol:'TSLA',name:'Tesla',quantity:'50',cost_basis:'200',market_value:'12500',sector:'Consumer Cyclical'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'AMZN',value:{symbol:'AMZN',name:'Amazon',quantity:'25',cost_basis:'170',market_value:'5500',sector:'Consumer Cyclical'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'JPM',value:{symbol:'JPM',name:'JPMorgan',quantity:'60',cost_basis:'155',market_value:'12000',sector:'Financial'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'BAC',value:{symbol:'BAC',name:'BofA',quantity:'200',cost_basis:'32',market_value:'7400',sector:'Financial'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'JNJ',value:{symbol:'JNJ',name:'J&J',quantity:'40',cost_basis:'160',market_value:'7000',sector:'Healthcare'},tags:['portfolio:holdings'],sensitivity:'high'},
-  {key:'XOM',value:{symbol:'XOM',name:'Exxon',quantity:'50',cost_basis:'100',market_value:'6200',sector:'Energy'},tags:['portfolio:holdings'],sensitivity:'high'},
-];
-const SAMPLE_RISK={risk_level:'moderate',max_drawdown:0.20,investment_horizon:'5_years',stop_loss_pct:15,take_profit_pct:50};
-const COLORS=['#3B82F6','#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#6366F1','#14B8A6'];
+async function generateAgentLink(){
+  const gw=document.getElementById('agentGwUrl').value.trim();
+  const status=document.getElementById('agentStatus');
+  if(!gw){status.innerHTML='<span class="status status-err">Enter Gateway URL first (run: uomp gateway start --browser)</span>';return}
+  if(!holdings.length){status.innerHTML='<span class="status status-err">Add holdings first</span>';return}
 
-function renderDashboard(holdings,risk){
-  let tc=0,tv=0;const secs={},rows=[];
-  for(const i of holdings){
-    const h=i.value;const q=parseFloat(h.quantity),c=parseFloat(h.cost_basis),m=parseFloat(h.market_value);
-    const p=m/q,cv=c*q,pnl=m-cv,pp=cv>0?(pnl/cv)*100:0;tc+=cv;tv+=m;
-    const s=h.sector||'Other';secs[s]=(secs[s]||0)+m;
-    rows.push({...h,qty:q,costBasis:c,price:p,curVal:m,pnl,pnlPct:pp,weight:0,sector:s});
+  status.innerHTML='<span class="status status-ok">Generating token...</span>';
+
+  // Build scopes from edited holdings
+  const tags=['portfolio:holdings','profile:risk'];
+  const keys=holdings.map(h=>h.sym).filter(Boolean);
+
+  try{
+    // Create session + grant token using the Gateway
+    const sessResp=await fetch(`${gw.replace(/\/$/,'')}/v1/sessions`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agent_id:'stock-analyst',agent_name:'Stock Analyst',requested_scopes:{read:{tags,keys,denyTags:[],denyKeys:[]},write:{tags:[],keys:[],denyTags:[],denyKeys:[]}},duration_minutes:30})
+    });
+    if(!sessResp.ok)throw new Error('Failed to create session. Is Gateway running?');
+    const sess=await sessResp.json();
+
+    const grantResp=await fetch(`${gw.replace(/\/$/,'')}/v1/sessions/${sess.session_id}/grant`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({granted_scopes:{read:{tags,keys,denyTags:[],denyKeys:[]},write:{tags:[],keys:[],denyTags:[],denyKeys:[]}},profile:'local',audience:gw})
+    });
+    if(!grantResp.ok)throw new Error('Failed to grant session');
+    const grant=await grantResp.json();
+
+    // Show instructions
+    document.getElementById('agentInstructions').style.display='block';
+    document.getElementById('agentGateway').textContent=gw;
+    document.getElementById('agentCommands').textContent=
+      `# Option 1: Run locally
+export UOM_TOKEN="${grant.token}"
+export UOMP_BASE_URL="${gw}"
+node examples/stock-analyst/index.js
+
+# Option 2: Use DO Agent
+# Open https://uomp-stock-analyst-mvblm.ondigitalocean.app
+# Paste Token: ${grant.token.slice(0,30)}...
+# Gateway URL: ${gw}
+
+# Option 3: One-click (copy this URL):
+# https://uomp-stock-analyst-mvblm.ondigitalocean.app/analyze`;
+
+    status.innerHTML='<span class="status status-ok">✓ Token generated. Agent can now analyze your portfolio.</span>';
+  }catch(e){
+    status.innerHTML=`<span class="status status-err">✗ ${e.message}. Make sure "uomp gateway start --browser" is running.</span>`;
   }
-  for(const r of rows)r.weight=tv>0?(r.curVal/tv)*100:0;
-  const tpnl=tv-tc,tpp=tc>0?(tpnl/tc)*100:0,hhi=rows.reduce((s,r)=>s+r.weight*r.weight,0);
-  const sigs=[],sl=risk?.stop_loss_pct||15,tp=risk?.take_profit_pct||50;
-  for(const r of rows){
-    if(r.pnlPct<=-sl)sigs.push({t:'stop_loss',m:`${r.symbol} ${r.pnlPct.toFixed(1)}% (SL:${sl}%)`});
-    if(r.pnlPct>=tp)sigs.push({t:'take_profit',m:`${r.symbol} +${r.pnlPct.toFixed(1)}% (TP:${tp}%)`});
-  }
-  const f=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),p=n=>n.toFixed(2)+'%';
-
-  document.getElementById('summary').innerHTML=`
-    <div class="card"><div class="card-label">Portfolio Value</div><div class="card-value">$${f(tv)}</div></div>
-    <div class="card"><div class="card-label">Total P&amp;L</div><div class="card-value ${tpnl>=0?'pos':'neg'}">$${f(tpnl)}</div><div class="card-sub ${tpnl>=0?'pos':'neg'}">${p(tpp)}</div></div>
-    <div class="card"><div class="card-label">HHI</div><div class="card-value">${hhi.toFixed(0)}</div><div class="card-sub">${hhi>2500?'⚠ High':'✓ OK'}</div></div>
-    <div class="card"><div class="card-label">Positions</div><div class="card-value">${holdings.length}</div><div class="card-sub">${Object.keys(secs).length} sectors</div></div>
-    <div class="card"><div class="card-label">Risk</div><div class="card-value">${risk?.risk_level||'?'}</div><div class="card-sub">DD≤${(risk?.max_drawdown||0)*100}%</div></div>
-  `;
-
-  document.getElementById('holdings').innerHTML=`<h2>Holdings</h2><table><thead><tr><th>Sym</th><th>Name</th><th>Qty</th><th>Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>P&amp;L%</th><th>W%</th><th>Sector</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${r.symbol}</b></td><td>${r.name||''}</td><td>${r.qty}</td><td>${f(r.costBasis)}</td><td>${f(r.price)}</td><td>$${f(r.curVal)}</td><td class="${r.pnl>=0?'pos':'neg'}">$${f(r.pnl)}</td><td class="${r.pnl>=0?'pos':'neg'}">${p(r.pnlPct)}</td><td>${p(r.weight)}</td><td>${r.sector}</td></tr>`).join('')}</tbody></table>`;
-
-  const sDiv=document.getElementById('sectors');sDiv.style.display='block';
-  const se=Object.entries(secs).sort((a,b)=>b[1]-a[1]);let si=0;
-  sDiv.innerHTML='<h2>Sectors</h2>'+se.map(([s,v])=>{const pc=tv>0?(v/tv)*100:0;return`<div class="bar-wrap"><span class="bar-label">${s}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(pc,100)}%;background:${COLORS[si++%COLORS.length]}"></div></div><span class="bar-pct">${p(pc)}</span></div>`}).join('');
-
-  if(sigs.length){const sd=document.getElementById('signals');sd.style.display='block';sd.innerHTML=`<h2>Signals</h2>${sigs.map(s=>`<div class="signal">${s.t==='stop_loss'?'🔴':'🟢'} ${s.m}</div>`).join('')}`}
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Init: handle Dropbox PKCE callback & URL hash
-// ═══════════════════════════════════════════════════════════════
-(function(){
-  // Dropbox PKCE callback (code in query string)
-  const qs = new URLSearchParams(window.location.search);
-  if (qs.get('code')) { connectDropbox(); return; }
+function disconnect(){cryptoKey=null;userId=null;dropbox=null;sToken('');location.reload();}
 
-  // Gateway auto-fill from hash
-  const h = window.location.hash.slice(1); if(!h) return;
-  const p = new URLSearchParams(h);
+// Init
+(function(){
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('code')){connectDropbox();return}
+  const h=location.hash.slice(1);if(!h)return;
+  const p=new URLSearchParams(h);
   const t=p.get('token'),g=p.get('gateway');
   if(t)document.getElementById('gwToken').value=t;
   if(g)document.getElementById('gwUrl').value=g;
