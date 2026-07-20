@@ -71,6 +71,12 @@
 <div class="footer">Powered by <a href="https://www.uomp.org" style="color:var(--mid)">UOMP</a> · Data encrypted. You hold the keys.</div>
 </div>
 
+<script>
+// Pre-load stubs — assigned by module when ready
+window._connect=null;window._linkDropbox=null;
+function connect(chain){if(window._connect)window._connect(chain);else document.getElementById('connectStatus').innerHTML='<span class="status status-ok">Loading SDK...</span>'}
+function linkDropbox(){if(window._linkDropbox)window._linkDropbox();else document.getElementById('connectStatus').innerHTML='<span class="status status-ok">Loading SDK...</span>'}
+</script>
 <script type="module">
 import { BrowserSDK, DropboxStore, connectDropbox as dbConnect, encryptData, decryptData } from './sdk.js';
 
@@ -101,7 +107,33 @@ window.dismissDb=function(){document.getElementById('dbBanner').style.display='n
 
 function updateTopbar(){const storage=dropbox?'Dropbox':'Browser localStorage';document.getElementById('topbar').innerHTML=document.getElementById('topbar').innerHTML.replace(/<span class="spacer">/,`<span style="color:var(--mid)">Storage:</span><span class="addr" style="color:var(--db);font-size:.8rem">${storage}</span><span class="spacer">`)}
 
-async function loadFromDb(){try{const raw=await dropbox.download('holdings.enc');if(raw&&cKey){const obj=JSON.parse(raw);const p=await decryptData(cKey,obj);const d=JSON.parse(p);holdings=d.h||[];reports=d.r||[];isSample=false;render()}const entries=await dropbox.list('/reports');for(const e of entries){if(e['.tag']==='file'&&!reports.find(r=>r.n===e.name)){const rd=await dropbox.download(`reports/${e.name}`);if(rd){try{const p=await decryptData(cKey,JSON.parse(rd));reports.push({n:e.name,d:e.client_modified,c:p})}catch{}}}}showReports()}}catch{}}
+async function loadFromDb(){
+  try {
+    const raw = await dropbox.download('holdings.enc');
+    if (raw && cKey) {
+      const obj = JSON.parse(raw);
+      const p = await decryptData(cKey, obj);
+      const d = JSON.parse(p);
+      holdings = d.h || [];
+      reports = d.r || [];
+      isSample = false;
+      render();
+    }
+    const entries = await dropbox.list('/reports');
+    for (const e of entries) {
+      if (e['.tag'] === 'file' && !reports.find(r => r.n === e.name)) {
+        const rd = await dropbox.download('reports/' + e.name);
+        if (rd) {
+          try {
+            const p = await decryptData(cKey, JSON.parse(rd));
+            reports.push({ n: e.name, d: e.client_modified, c: p });
+          } catch (err) {}
+        }
+      }
+    }
+    showReports();
+  } catch (err) {}
+}
 
 async function save(){const obj={h:holdings,r:reports.slice(0,50)};if(dropbox){const e=await encryptData(cKey,JSON.stringify(obj));await dropbox.upload('holdings.enc',JSON.stringify(e))}else{await BrowserSDK.saveEncrypted(cKey,uid,obj)}changed=false;document.getElementById('saveBtn').style.display='none';document.getElementById('saveStatus').innerHTML='<span class="status status-ok">✓ Saved</span>';setTimeout(()=>document.getElementById('saveStatus').innerHTML='',2000)}
 window.save=save;
@@ -126,7 +158,44 @@ function render(){
 async function checkAgents(){for(const a of AGENTS){try{const r=await fetch(`${a.url}/health`);a.online=r.ok}catch{a.online=false}}renderAgents()}
 function renderAgents(){document.getElementById('agentCards').innerHTML=AGENTS.map(a=>`<div class="card" style="flex:1;min-width:280px"><div class="card-label">${a.online?'<span class="status status-ok">● Online</span>':'<span class="status status-err">● Offline</span>'} · ${a.id}</div><div style="font-size:1rem;font-weight:700;margin:.25rem 0">${a.name}</div><div style="color:var(--mid);font-size:.83rem;margin-bottom:.75rem">${a.desc}</div><button class="btn btn-pur" onclick="sendToAgent('${a.id}')" ${a.online?'':'disabled'}>📤 Send Portfolio → Agent</button><span id="as_${a.id}" style="font-size:.75rem;display:block;margin-top:.5rem"></span></div>`).join('')}
 
-window.sendToAgent=async function(id){const a=AGENTS.find(x=>x.id===id);if(!a)return;const s=document.getElementById('as_'+id);s.innerHTML='<span class="status status-ok">Analyzing...</span>';try{const resp=await fetch(`${a.url}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({holdings:holdings.map(h=>({key:h.s,value:{symbol:h.s,name:h.n,quantity:h.q,cost_basis:h.c,market_value:(parseFloat(h.q)*parseFloat(h.c)*1.15).toFixed(2),sector:h.sec,currency:'USD'},tags:['portfolio:holdings']})),risk:{risk_level:'moderate',max_drawdown:0.20,stop_loss_pct:15,take_profit_pct:50}})});if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${resp.status}`)}const r=await resp.json();const content=r.results?.markdown_zh||r.results?.markdown_en||r.results?.html||JSON.stringify(r.summary,null,2);reports.push({d:new Date().toISOString().slice(0,16),c:content,n:`${id}-${new Date().toISOString().slice(0,10)}`});changed=true;document.getElementById('saveBtn').style.display='inline-block';showReports();s.innerHTML='<span class="status status-ok">✓ Analysis complete</span>'}catch(e){s.innerHTML=`<span class="status status-err">${e.message}</span>`}}
+window.sendToAgent = async function(id) {
+  const a = AGENTS.find(x => x.id === id);
+  if (!a) return;
+  const s = document.getElementById('as_' + id);
+  s.innerHTML = '<span class="status status-ok">Analyzing...</span>';
+  try {
+    const payload = {
+      holdings: holdings.map(h => ({
+        key: h.s,
+        value: {
+          symbol: h.s, name: h.n, quantity: h.q, cost_basis: h.c,
+          market_value: (parseFloat(h.q) * parseFloat(h.c) * 1.15).toFixed(2),
+          sector: h.sec, currency: 'USD'
+        },
+        tags: ['portfolio:holdings']
+      })),
+      risk: { risk_level: 'moderate', max_drawdown: 0.20, stop_loss_pct: 15, take_profit_pct: 50 }
+    };
+    const resp = await fetch(a.url + '/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error(e.error?.message || 'HTTP ' + resp.status);
+    }
+    const r = await resp.json();
+    const content = r.results?.markdown_zh || r.results?.markdown_en || r.results?.html || JSON.stringify(r.summary, null, 2);
+    reports.push({ d: new Date().toISOString().slice(0, 16), c: content, n: id + '-' + new Date().toISOString().slice(0, 10) });
+    changed = true;
+    document.getElementById('saveBtn').style.display = 'inline-block';
+    showReports();
+    s.innerHTML = '<span class="status status-ok">✓ Analysis complete</span>';
+  } catch (e) {
+    s.innerHTML = '<span class="status status-err">' + e.message + '</span>';
+  }
+};
 
 function showReports(){const rd=document.getElementById('reports');rd.innerHTML=reports.map(r=>`<div class="report-card"><div class="date">${r.d||r.n}</div><pre>${(r.c||'').slice(0,2000)}</pre></div>`).join('')||'<div class="empty">No reports yet. Send your portfolio to the Agent above.</div>'}
 
