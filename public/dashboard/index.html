@@ -40,7 +40,7 @@
 
   <!-- Dropbox prompt -->
   <div class="db-banner" id="dbBanner">
-    <p>📦 <b>Connect Dropbox</b> to back up your encrypted portfolio in the cloud. Access from any device.</p>
+    <p>📦 <b>Connect Dropbox</b> to back up your encrypted portfolio in the cloud. Access from any device.<br><span style="font-size:.75rem;color:var(--dim)">Note: OAuth redirect will reload the page. Reconnect your wallet afterwards.</span></p>
     <div style="display:flex;gap:.5rem">
       <button class="btn btn-db" onclick="linkDropbox()">Connect Dropbox</button>
       <button class="btn btn-out" onclick="dismissDb()">Skip — use browser storage</button>
@@ -95,8 +95,13 @@ async function load(){const local=await BrowserSDK.loadEncrypted(cKey,uid);if(lo
 function showApp(ch,addr){
   document.getElementById('connect').style.display='none';document.getElementById('app').style.display='block';
   updateTopbar(ch,addr);
-  document.getElementById('dbBanner').style.display='block';
-  if(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('uomp_db')){linkDropbox()}
+  // Auto-connect Dropbox if token exists (from previous OAuth redirect)
+  if(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('uomp_db')){
+    document.getElementById('dbBanner').style.display='none';
+    linkDropbox();
+  }else{
+    document.getElementById('dbBanner').style.display='block';
+  }
   render();checkAgents();
 }
 
