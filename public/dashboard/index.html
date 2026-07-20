@@ -173,6 +173,6 @@ window.handleCSV=function(e){const f=e.target.files[0];if(!f)return;const r=new 
 // Init — only auto-start on actual OAuth redirect (URL has ?code=), never from sessionStorage
 window._connect=connectWallet;window._linkDropbox=connectDb;window._autoStart=autoStart;
 const _qs=new URLSearchParams(location.search);
-if(_qs.get('code')){sessionStorage.setItem('uomp_db_code','1');autoStart()}
+if(_qs.get('code')){sessionStorage.setItem('uomp_db_code','1');document.getElementById('landing').style.display='none';document.getElementById('app').style.display='block';autoStart()}
 </script>
 </body></html>
