@@ -1,5 +1,5 @@
 /**
- * UOMP Browser SDK v20260720-6e3e728 — fix loadEncrypted error handling
+ * UOMP Browser SDK v20260720-b47e230 — fix loadEncrypted error handling
  * Self-contained bundle for browser use.
  * No Node.js dependencies. Uses Web Crypto API + window.fetch.
  */
@@ -133,7 +133,7 @@ async function connectDropbox(){
   sessionStorage.setItem('uomp_db_v',cv);
   const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cv));
   const cc=btoa(String.fromCharCode(...new Uint8Array(h))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const authUrl=`https://www.dropbox.com/oauth2/authorize?client_id=${DB_KEY}&response_type=code&code_challenge=${cc}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(DB_REDIRECT)}&token_access_type=offline&scope=files.content.write%20files.content.read`;
+  const authUrl=`https://www.dropbox.com/oauth2/authorize?client_id=${DB_KEY}&response_type=code&code_challenge=${cc}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(DB_REDIRECT)}`;
 
   return new Promise((resolve,reject)=>{
     const popup=window.open(authUrl,'dropbox-auth','width=600,height=700');
