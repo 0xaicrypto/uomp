@@ -113,7 +113,7 @@ source /tmp/uomp-remote.env && node ./examples/stock-analyst/index.js</code></pr
       <h3>Deployed Agent (Digital Ocean)</h3>
       <pre><code>curl -X POST https://uomp-stock-analyst-mvblm.ondigitalocean.app/analyze \
   -H 'Content-Type: application/json' \
-  -d '{"holdings":[...],"risk":{...}}'</code></pre>
+  -d '&#123;"holdings":[...],"risk":&#123;&#125;&#125;'</code></pre>
 
       <div class="hero-btns" style="margin-top:2.5rem">
         <a href={`${baseUrl}en/tutorial/`} class="btn-h1">SDK Tutorial →</a>
